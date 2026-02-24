@@ -4,18 +4,16 @@
       <ion-toolbar>
         <div class="topbar">
           <div class="brand">
-            <div class="logo">
-              <img :src="logo" alt="AutoValor logo" />
-            </div>
+            <img :src="logo" alt="AutoValor logo" class="logo" />
             <div class="title">AutoValor</div>
           </div>
 
           <div class="actions">
-            <ion-button fill="clear">
+            <ion-button fill="clear" size="small">
               <ion-icon :icon="notificationsOutline" />
             </ion-button>
 
-            <ion-button fill="clear" @click="goToWishlist">
+            <ion-button fill="clear" size="small" @click="goToWishlist">
               <ion-icon :icon="heartOutline" />
             </ion-button>
           </div>
@@ -25,12 +23,7 @@
       <ion-toolbar class="search-toolbar">
         <div class="search-pill">
           <ion-icon class="search-ic" :icon="searchOutline" />
-          <ion-input
-            v-model="query"
-            placeholder="Search"
-            class="search-input"
-            clear-input
-          />
+          <ion-input v-model="query" placeholder="Search" class="search-input" clear-input />
           <button class="filter-btn" type="button">
             <ion-icon :icon="optionsOutline" />
           </button>
@@ -39,17 +32,11 @@
     </ion-header>
 
     <ion-content>
-      <!-- LAST VIEW -->
-      <div class="section">
-        <div class="section-title">Last View</div>
+      <section class="section">
+        <h3>Last View</h3>
 
         <div class="lastview-row">
-          <div
-            v-for="car in lastViewed"
-            :key="car.id"
-            class="last-card"
-            @click="goToCar(car.id)"
-          >
+         <article v-for="car in lastViewed" :key="car.id" class="last-card" @click="goToCar(car.id)">
             <div class="last-img">
               <img :src="car.images[0]" :alt="car.brand + ' ' + car.model" />
 
@@ -64,44 +51,56 @@
               <div class="last-meta">
                 <ion-icon class="star" :icon="star" />
                 <span>{{ car.rating }}</span>
-                <span class="dot">·</span>
+                <span class="dot">|</span>
                 <span>{{ car.type }}</span>
               </div>
 
               <div class="last-price">\${{ formatPrice(car.price) }}</div>
             </div>
-          </div>
+          </article>
         </div>
-      </div>
+      </section>
 
-      <!-- (Opcional) Aquí luego metemos Search Brand + Top Vehicles como en Figma -->
-    </ion-content>
+      <section class="section">
+        <h3>Serch Brand</h3>
+        <div class="brand-grid">
+          <button v-for="brand in brands" :key="brand.label" class="brand-pill" @click="query = brand.query" type="button">
+            <div class="brand-icon">{{ brand.icon }}</div>
+            <span>{{ brand.label }}</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="section bottom-space">
+        <div class="row-title">
+          <h3>Top Deals</h3>
+          <button class="link-btn" type="button">See All</button>
+        </div>
+      <article v-for="car in filteredCars" :key="car.id" class="deal-row" @click="goToCar(car.id)">
+          <div class="deal-thumb"><img :src="car.images[0]" :alt="car.brand" /></div>
+          <div class="deal-info">
+            <div class="deal-title">{{ car.brand }} {{ car.model }}</div>
+            <div class="deal-meta">
+              <ion-icon :icon="star" />
+              <span>{{ car.rating }}</span>
+              <span class="dot">|</span>
+              <span>{{ car.type }}</span>
+            </div>
+          </div>
+          <div class="deal-price">\${{ formatPrice(car.price) }}</div>
+        </article>
+      </section>
+    </ion-content>  
   </ion-page>
 </template>
 
 <script setup lang="ts">
-import {
-  IonPage,
-  IonHeader,
-  IonToolbar,
-  IonContent,
-  IonButton,
-  IonIcon,
-  IonInput,
-} from '@ionic/vue';
+import { IonPage, IonHeader, IonToolbar, IonContent, IonButton, IonIcon, IonInput } from '@ionic/vue';
 
 import logo from '@/assets/logos/autovalor_logo.png';
 
-import {
-  heart,
-  heartOutline,
-  notificationsOutline,
-  optionsOutline,
-  searchOutline,
-  star,
-} from 'ionicons/icons';
-
-import { computed, ref, onMounted } from 'vue';
+import { heart, heartOutline, notificationsOutline, optionsOutline, searchOutline, star } from 'ionicons/icons';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { CARS, type Car } from '@/data/cars';
 import { useWishlistStore } from '@/stores/wishlist';
@@ -109,12 +108,33 @@ import { useWishlistStore } from '@/stores/wishlist';
 const router = useRouter();
 const wishlist = useWishlistStore();
 
-onMounted(() => wishlist.init());
-
 const query = ref('');
 const cars = ref<Car[]>(CARS);
 
-const lastViewed = computed(() => cars.value.slice(0, 2));
+onMounted(() => wishlist.init());
+
+const lastViewed = computed(() => {
+  const priorityIds = ['ferrari-race', 'camaro'];
+  const preferred = priorityIds.map((id) => cars.value.find((c) => c.id === id)).filter(Boolean) as Car[];
+  return preferred.length ? preferred : cars.value.slice(0, 2);
+});
+
+const brands = [
+  { label: 'Mercedes', query: 'Mercedes', icon: '◉' },
+  { label: 'Tesla', query: 'Tesla', icon: 'T' },
+  { label: 'BMW', query: 'BMW', icon: 'B' },
+  { label: 'Toyota', query: 'Toyota', icon: '◌' },
+  { label: 'Volvo', query: 'Volvo', icon: 'V' },
+  { label: 'Bugatti', query: 'Bugatti', icon: 'BG' },
+  { label: 'Honda', query: 'Honda', icon: 'H' },
+  { label: 'More', query: '', icon: '···' },
+];
+
+const filteredCars = computed(() => {
+  const q = query.value.trim().toLowerCase();
+  if (!q) return cars.value.slice(0, 3);
+  return cars.value.filter((c) => `${c.brand} ${c.model}`.toLowerCase().includes(q)).slice(0, 4);
+});
 
 function goToCar(id: string) {
   router.push(`/car/${id}`);
@@ -130,58 +150,25 @@ function formatPrice(n: number) {
 </script>
 
 <style scoped>
-/* ===== Topbar ===== */
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 10px;
-}
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 4px 10px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.logo { width: 32px; height: 32px; object-fit: contain; }
+.title { font-size: 31px; font-weight: 700; transform: scale(0.5); transform-origin: left center; margin-right: -44px; }
+.actions ion-icon { font-size: 19px; color: #161616; }
 
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.logo {
-  width: 36px;
-  height: 36px;
+.search-toolbar { padding: 4px 14px 8px; }
+.search-pill {
+  height: 40px;
   border-radius: 12px;
   background: #f3f3f3;
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
+  padding: 0 10px;
 }
-
-.logo img {
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
-}
-
-.title {
-  font-weight: 800;
-  font-size: 16px;
-}
-
-.actions ion-icon {
-  font-size: 20px;
-}
-
-/* ===== Search ===== */
-.search-toolbar {
-  padding: 6px 14px 10px 14px;
-}
-
-.search-pill {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: #efefef;
-  border-radius: 16px;
-  padding: 10px 12px;
-}
+.search-ic { color: #b6b6b6; font-size: 16px; }
+.search-input { font-size: 12px; }
+.filter-btn { border: none; background: transparent; display: grid; place-items: center; color: #202020; }
 
 .search-ic {
   font-size: 18px;

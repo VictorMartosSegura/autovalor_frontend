@@ -1,36 +1,57 @@
 <template>
   <ion-page>
-    <ion-header>
+    <ion-header  class="ion-no-border">
       <ion-toolbar>
         <ion-buttons slot="start">
           <ion-back-button default-href="/tabs/home" />
         </ion-buttons>
-        <ion-title>{{ car?.brand }} {{ car?.model }}</ion-title>
+        <ion-buttons slot="end">
+          <ion-button fill="clear" @click="toggleWish" v-if="car">
+            <ion-icon :icon="wishlist.isInWishlist(car.id) ? heart : heartOutline" />
+          </ion-button>
+        </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
     <ion-content class="ion-padding" v-if="car">
 
-      <!-- Swiper -->
-      <Swiper :modules="[Pagination]" :pagination="{ clickable: true }">
-        <SwiperSlide v-for="(img, i) in car.images" :key="i">
-          <img :src="img" class="car-img" />
-        </SwiperSlide>
-      </Swiper>
+      <div class="hero">
+        <img :src="car.images[0]" class="car-img" />
+      </div>
 
       <h2 class="title">{{ car.brand }} {{ car.model }}</h2>
-      <p>Type: {{ car.type }}</p>
-      <p>Rating: ⭐ {{ car.rating }}</p>
-      <p><strong>Price: ${{ formatPrice(car.price) }}</strong></p>
+      <div class="subtitle">
+        <span class="pill">{{ car.type }}</span>
+        <span>★ {{ car.rating }} (86 reviews)</span>
+      </div>
 
-      <ion-button expand="block" @click="goToOffer">
-        Make an offer
-      </ion-button>
+      <h3>Description</h3>
+      <p class="description">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt
+        ut labore et dolore magna aliqua.
+      </p>
+
+    <h3>Gallery Photos</h3>
+      <div class="gallery">
+        <div v-for="(img, i) in gallery" :key="i" class="gallery-item">
+          <img :src="img" />
+        </div>
+      </div>
+
+      <div class="seller">
+        <div>
+          <strong>BMW Store</strong>
+          <p>Official Dealer</p>
+        </div>
+      </div>
     </ion-content>
 
-    <ion-content v-else class="ion-padding">
-      <p>Car not found</p>
-    </ion-content>
+    <ion-footer v-if="car" class="ion-no-border footer">
+      <div class="price">\${{ formatPrice(car.price) }}</div>
+      <ion-button class="buy-btn" @click="goToOffer">Buy the car</ion-button>
+    </ion-footer>
+
+    <ion-content v-else class="ion-padding"><p>Car not found</p></ion-content>
   </ion-page>
 </template>
 
@@ -39,33 +60,35 @@ import {
   IonPage,
   IonHeader,
   IonToolbar,
-  IonTitle,
   IonContent,
   IonButtons,
   IonBackButton,
   IonButton,
+  IonIcon,
+  IonFooter,
 } from '@ionic/vue';
 
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { CARS } from '@/data/cars';
 
-import { Swiper, SwiperSlide } from 'swiper/vue';
-import { Pagination } from 'swiper/modules';
-
-import 'swiper/css';
-import 'swiper/css/pagination';
+import { heart, heartOutline } from 'ionicons/icons';
+import { useWishlistStore } from '@/stores/wishlist';
 
 const route = useRoute();
 const router = useRouter();
+const wishlist = useWishlistStore();
+wishlist.init();
 
-const car = computed(() => {
-  const id = String(route.params.id);
-  return CARS.find((c) => c.id === id);
-});
+const car = computed(() => CARS.find((c) => c.id === String(route.params.id)));
+const gallery = computed(() => (car.value ? new Array(5).fill(car.value.images[0]) : []));
 
 function goToOffer() {
   router.push(`/offer/${route.params.id}`);
+}
+
+function toggleWish() {
+  if (car.value) wishlist.toggle(car.value.id);
 }
 
 function formatPrice(n: number) {
@@ -74,16 +97,25 @@ function formatPrice(n: number) {
 </script>
 
 <style scoped>
-.car-img {
-  width: 100%;
-  height: 260px;
-  object-fit: contain;
-  border-radius: 12px;
-  background: #f5f5f5;
+.hero { background: #f7f7f7; border-radius: 18px; padding: 16px; }
+.car-img { width: 100%; height: 180px; object-fit: contain; }
+.title { margin: 16px 0 6px; font-size: 30px; font-weight: 900; }
+.subtitle { display: flex; gap: 8px; align-items: center; color: #555; font-size: 12px; }
+.pill { background: #efefef; padding: 2px 8px; border-radius: 8px; color: #111; }
+h3 { font-size: 14px; margin: 16px 0 8px; }
+.description { color: #555; font-size: 12px; line-height: 1.5; }
+.gallery { display: flex; gap: 8px; overflow: auto; }
+.gallery-item { min-width: 76px; height: 52px; background: #f4f4f4; border-radius: 10px; padding: 4px; }
+.gallery-item img { width: 100%; height: 100%; object-fit: contain; }
+.seller { margin: 14px 0; border-top: 1px solid #eee; padding-top: 12px; }
+.seller p { margin: 2px 0 0; font-size: 12px; color: #666; }
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px 18px;
+  background: #fff;
 }
-
-.title {
-  margin-top: 14px;
-  font-weight: 700;
-}
+.price { font-size: 26px; font-weight: 900; }
+.buy-btn { --background: #0d0d0d; --border-radius: 999px; font-weight: 700; }
 </style>

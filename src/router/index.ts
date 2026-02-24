@@ -14,6 +14,7 @@ const routes: Array<RouteRecordRaw> = [
       { path: 'home', component: () => import('@/views/Tab1Page.vue') },
       { path: 'wishlist', component: () => import('@/views/WishlistPage.vue') },
       { path: 'orders', component: () => import('@/views/OrdersPage.vue') },
+      { path: 'messages', component: () => import('@/views/Tab2Page.vue') },
       { path: 'profile', component: () => import('@/views/ProfilePage.vue') },
     ],
   },
