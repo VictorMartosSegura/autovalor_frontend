@@ -5,7 +5,7 @@
         <div class="head-row">
           <div class="title-row">
             <img :src="logo" alt="AutoValor" class="logo" />
-            <h1>Profile</h1>
+            <h1>My Profile</h1>
           </div>
           <ion-button fill="clear" size="small" class="menu-btn">
             <ion-icon :icon="ellipsisHorizontal" />
@@ -91,7 +91,9 @@ function goEdit() {
 <style scoped>
 .profile-header ion-toolbar {
   --background: #fff;
-  padding: 6px 16px 2px;
+  --padding-top: var(--app-safe-top);
+  --min-height: 74px;
+  padding: 10px var(--app-page-gutter) 2px;
 }
 
 .head-row {
@@ -107,15 +109,15 @@ function goEdit() {
 }
 
 .logo {
-  width: 18px;
-  height: 18px;
+  width: 34px;
+  height: 34px;
   object-fit: contain;
 }
 
 h1 {
   margin: 0;
   color: #1f222a;
-  font-size: 32px;
+  font-size: clamp(20px, 6vw, 24px);
   font-weight: 700;
   letter-spacing: -0.3px;
 }
@@ -128,10 +130,11 @@ h1 {
 
 .profile-content {
   --background: #fff;
+  --padding-top: 12px;
 }
 
 .wrap {
-  padding: 6px 18px 20px;
+  padding: 6px var(--app-page-gutter) 20px;
   font-family: 'SF Pro Text', 'Segoe UI', Arial, sans-serif;
 }
 
@@ -231,5 +234,28 @@ h2 {
 
 .logout ion-icon:first-child {
   color: #ff4d4f;
+}
+
+@media (max-width: 360px) {
+  .avatar-wrap {
+    width: 96px;
+    height: 96px;
+  }
+
+  h2 {
+    font-size: 24px;
+  }
+
+  .row {
+    min-height: 42px;
+    font-size: 15px;
+  }
+}
+
+@media (min-width: 768px) {
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+  }
 }
 </style>

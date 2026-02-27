@@ -1,6 +1,6 @@
 <template>
   <ion-page>
-    <ion-header class="ion-no-border home-header">
+    <ion-header class="ion-no-border home-header mobile-safe-header">
       <ion-toolbar class="home-navbar">
         <div class="navbar-header">
           <div class="navbar-logo">
@@ -22,13 +22,13 @@
       </ion-toolbar>
     </ion-header>
 
-    <ion-content class="home-content">
+    <ion-content class="home-content mobile-safe-content">
       <section>
         <div class="section-header">
           <span class="section-title">Last View</span>
         </div>
-        <div class="cards-grid">
-          <div v-for="car in lastViewed" :key="car.id" class="product-card" @click="goToCar(car.id)">
+        <div class="last-view-row">
+          <div v-for="car in lastViewed" :key="car.id" class="product-card last-view-card" @click="goToCar(car.id)">
             <div class="card-image">
               <img :src="car.image" :alt="car.name" />
               <button class="card-heart" @click.stop="wishlist.toggle(car.id)"><ion-icon :icon="wishlist.isInWishlist(car.id) ? heart : heartOutline" /></button>
@@ -102,25 +102,34 @@ const cars = ref<Car[]>(CARS);
 onMounted(() => wishlist.init());
 
 const byId = (id: string) => cars.value.find((c) => c.id === id);
-const ferrari = computed(() => byId('ferrari-race'));
-const camaro = computed(() => byId('camaro'));
+const mclarenBlack = computed(() => byId('mclaren-black'));
+const lamborghini = computed(() => byId('lamborghini'));
+const ferrariRace = computed(() => byId('ferrari-race'));
 
 const lastViewed = computed(() => [
   {
-    id: ferrari.value?.id ?? 'ferrari-race',
-    image: ferrari.value?.images[0] ?? '',
-    name: 'Porsche Sports',
-    rating: 4.9,
-    tag: 'New',
-    price: 190000,
+    id: mclarenBlack.value?.id ?? 'mclaren-black',
+    image: mclarenBlack.value?.images[0] ?? '',
+    name: 'McLaren Black',
+    rating: mclarenBlack.value?.rating ?? 4.9,
+    tag: mclarenBlack.value?.condition ?? 'Used',
+    price: mclarenBlack.value?.price ?? 280000,
   },
   {
-    id: camaro.value?.id ?? 'camaro',
-    image: camaro.value?.images[0] ?? '',
-    name: 'Camaro Sports',
-    rating: 4.7,
-    tag: 'New',
-    price: 170000,
+    id: lamborghini.value?.id ?? 'lamborghini',
+    image: lamborghini.value?.images[0] ?? '',
+    name: 'Lamborghini',
+    rating: lamborghini.value?.rating ?? 5.0,
+    tag: lamborghini.value?.condition ?? 'New',
+    price: lamborghini.value?.price ?? 320000,
+  },
+  {
+    id: ferrariRace.value?.id ?? 'ferrari-race',
+    image: ferrariRace.value?.images[0] ?? '',
+    name: 'Ferrari Race',
+    rating: ferrariRace.value?.rating ?? 4.9,
+    tag: ferrariRace.value?.condition ?? 'Used',
+    price: ferrariRace.value?.price ?? 185000,
   },
 ]);
 
@@ -164,7 +173,7 @@ function formatPrice(n: number) {
 }
 
 .home-navbar {
-  padding: 14px 18px 0;
+  padding: 14px var(--app-page-gutter) 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -199,7 +208,7 @@ function formatPrice(n: number) {
   --color: #202127;
 }
 
-.search-wrap { padding: 10px 18px 0; }
+.search-wrap { padding: 10px var(--app-page-gutter) 0; }
 .search-bar {
   display: flex;
   align-items: center;
@@ -221,11 +230,25 @@ function formatPrice(n: number) {
 
 .home-content { --background: #ffffff; }
 
-.section-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px 10px; }
+.section-header { display: flex; align-items: center; justify-content: space-between; padding: 14px var(--app-page-gutter) 10px; }
 .section-title { font-size: 22px; font-weight: 700; color: #202127; }
 .see-all { font-size: 14px; font-weight: 600; color: #8e8e93; cursor: pointer; }
 
-.cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 18px; }
+.cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 var(--app-page-gutter); }
+.last-view-row {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 0 calc(var(--app-page-gutter) + 8px) 0 calc(var(--app-page-gutter) + 20px);
+  scroll-snap-type: x mandatory;
+  scroll-padding-left: calc(var(--app-page-gutter) + 20px);
+  -webkit-overflow-scrolling: touch;
+}
+.last-view-card {
+  min-width: min(280px, 74vw);
+  max-width: min(300px, 78vw);
+  scroll-snap-align: start;
+}
 .product-card {
   background: #f6f6f7;
   border-radius: 20px;
@@ -255,7 +278,7 @@ function formatPrice(n: number) {
 .card-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; background: #eceeef; color: #5a5d66; border-radius: 6px; }
 .card-price { font-size: 17px; font-weight: 800; color: #1f222a; }
 
-.brands-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 12px; padding: 0 18px; }
+.brands-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 12px; padding: 0 var(--app-page-gutter); }
 .brand-item { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; background: none; border: none; }
 .brand-icon {
   width: 52px; height: 52px;
@@ -268,22 +291,124 @@ function formatPrice(n: number) {
 
 /* Responsive for mobile */
 @media (max-width: 600px) {
-  .home-navbar,
-  .section-header {
-    padding-left: 14px;
-    padding-right: 14px;
-  }
-  .search-wrap {
-    padding-left: 14px;
-    padding-right: 14px;
-  }
-  .cards-grid,
-  .brands-grid {
-    padding-left: 14px;
-    padding-right: 14px;
-  }
   .section-title {
     font-size: 20px;
+  }
+}
+
+@media (max-width: 360px) {
+  .navbar-brand { font-size: 18px; }
+  .last-view-card {
+    min-width: 78vw;
+    max-width: 78vw;
+  }
+  .card-image { height: 108px; padding: 10px; }
+  .card-info { padding: 8px 10px 12px; }
+  .card-name { font-size: 14px; }
+  .card-price { font-size: 15px; }
+  .brand-icon { width: 46px; height: 46px; }
+  .brand-icon img { width: 22px; height: 22px; }
+  .brand-name { font-size: 11px; }
+}
+
+@media (min-width: 768px) {
+  .cards-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .brands-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .home-navbar {
+    padding-top: 6px;
+  }
+
+  .logo {
+    width: 24px;
+    height: 24px;
+  }
+
+  .navbar-brand {
+    font-size: 16px;
+  }
+
+  .search-wrap {
+    padding-top: 6px;
+  }
+
+  .search-bar {
+    height: 38px;
+    border-radius: 10px;
+  }
+
+  .section-header {
+    padding-top: 8px;
+    padding-bottom: 6px;
+  }
+
+  .section-title {
+    font-size: 18px;
+  }
+
+  .last-view-card {
+    min-width: 32vw;
+    max-width: 32vw;
+  }
+
+  .last-view-row {
+    padding-left: calc(var(--app-page-gutter) + 14px);
+    scroll-padding-left: calc(var(--app-page-gutter) + 14px);
+  }
+
+  .cards-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .card-image {
+    height: 94px;
+    padding: 8px;
+  }
+
+  .card-heart {
+    width: 26px;
+    height: 26px;
+    top: 7px;
+    right: 7px;
+  }
+
+  .card-info {
+    padding: 8px 10px 10px;
+  }
+
+  .card-name {
+    font-size: 14px;
+  }
+
+  .card-price {
+    font-size: 15px;
+  }
+
+  .brands-grid {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 10px 8px;
+  }
+
+  .brand-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .brand-icon img {
+    width: 20px;
+    height: 20px;
+  }
+
+  .brand-name {
+    font-size: 11px;
   }
 }
 </style>

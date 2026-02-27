@@ -3,6 +3,9 @@ import App from './App.vue'
 import router from './router';
 
 import { IonicVue } from '@ionic/vue';
+import PrimeVue from 'primevue/config';
+import Aura from '@primeuix/themes/aura';
+import 'primeicons/primeicons.css';
 
 import { createPinia } from 'pinia';
 
@@ -38,6 +41,14 @@ import './theme/variables.css';
 
 const app = createApp(App)
   .use(IonicVue)
+  .use(PrimeVue, {
+    theme: {
+      preset: Aura,
+      options: {
+        darkModeSelector: false,
+      },
+    },
+  })
   .use(createPinia())
   .use(router);
 

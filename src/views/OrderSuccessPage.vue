@@ -2,7 +2,7 @@
   <ion-page>
     <ion-content class="success-page">
       <div class="success-wrap">
-        <div class="success-icon">??</div>
+        <img class="success-icon" :src="orderSuccessImg" alt="Order success" />
         <h2>Order Successful!</h2>
         <p>You have successfully made order</p>
 
@@ -16,10 +16,12 @@
 <script setup lang="ts">
 import { IonButton, IonContent, IonPage } from '@ionic/vue';
 import { useRouter } from 'vue-router';
+import orderSuccessImg from '@/assets/images/order_succes.png';
 
 const router = useRouter();
 
 function viewOrder() {
+  window.sessionStorage.setItem('orders_default_segment', 'active');
   router.replace('/tabs/orders');
 }
 
@@ -32,7 +34,7 @@ function viewReceipt() {
 .success-page { --background: #fff; }
 .success-wrap {
   min-height: 100%;
-  padding: 24px;
+  padding: 24px var(--app-page-gutter);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -41,18 +43,13 @@ function viewReceipt() {
   font-family: 'SF Pro Text', 'Segoe UI', Arial, sans-serif;
 }
 .success-icon {
-  width: 104px;
-  height: 104px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 30% 20%, #2e3036 0, #101116 70%);
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-size: 46px;
+  width: 160px;
+  height: 160px;
+  object-fit: contain;
   margin-bottom: 14px;
 }
-h2 { margin: 0 0 8px; color: #202127; font-size: 36px; }
-p { margin: 0 0 20px; color: #70737b; font-size: 20px; }
+h2 { margin: 0 0 8px; color: #202127; font-size: clamp(28px, 9vw, 36px); }
+p { margin: 0 0 20px; color: #70737b; font-size: clamp(16px, 5.5vw, 20px); }
 .primary {
   --background: #07080d;
   --color: #fff;
@@ -73,5 +70,12 @@ p { margin: 0 0 20px; color: #70737b; font-size: 20px; }
   font-weight: 600;
   width: 100%;
   max-width: 320px;
+}
+
+@media (max-width: 360px) {
+  .success-icon {
+    width: 136px;
+    height: 136px;
+  }
 }
 </style>

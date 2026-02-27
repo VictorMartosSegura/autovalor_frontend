@@ -1,6 +1,6 @@
 <template>
   <ion-page>
-    <ion-header class="ion-no-border">
+    <ion-header class="ion-no-border mobile-safe-header">
       <ion-toolbar>
         <ion-buttons slot="start">
           <ion-back-button :default-href="`/car/${carId}`" text="" />
@@ -9,14 +9,9 @@
       </ion-toolbar>
     </ion-header>
 
-    <ion-content class="offer-page">
+    <ion-content class="offer-page mobile-safe-content">
       <div class="offer-wrap">
-        <div class="illustration" aria-hidden="true">
-          <div class="clock">
-            <div class="clock-hand one"></div>
-            <div class="clock-hand two"></div>
-          </div>
-        </div>
+        <img class="illustration" :src="offerImg" alt="Offer processing" />
 
         <h2>Your offer is being processed</h2>
         <p>
@@ -34,6 +29,7 @@
 <script setup lang="ts">
 import { IonBackButton, IonButton, IonButtons, IonContent, IonFooter, IonHeader, IonPage, IonTitle, IonToolbar } from '@ionic/vue';
 import { useRoute, useRouter } from 'vue-router';
+import offerImg from '@/assets/images/offer.png';
 
 const route = useRoute();
 const router = useRouter();
@@ -53,29 +49,18 @@ function goAccepted() {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 24px;
+  padding: 24px var(--app-page-gutter);
   font-family: 'SF Pro Text', 'Segoe UI', Arial, sans-serif;
 }
 .illustration {
-  width: 180px;
-  height: 140px;
-  display: grid;
-  place-items: center;
+  width: 170px;
+  height: 170px;
+  object-fit: contain;
   margin-bottom: 20px;
 }
-.clock {
-  width: 94px;
-  height: 94px;
-  border-radius: 50%;
-  border: 4px solid #4e4e68;
-  position: relative;
-}
-.clock-hand { position: absolute; left: 50%; top: 50%; height: 3px; background: #4e4e68; transform-origin: left center; border-radius: 2px; }
-.clock-hand.one { width: 26px; transform: translate(-2px, -2px) rotate(20deg); }
-.clock-hand.two { width: 34px; transform: translate(-2px, -2px) rotate(210deg); }
 h2 { margin: 0 0 10px; font-size: 40px; line-height: 1.15; color: #202127; }
 p { margin: 0; color: #6a6d75; font-size: 22px; line-height: 1.45; max-width: 520px; }
-.footer { padding: 12px 20px 20px; background: #fff; }
+.footer { padding: 12px var(--app-page-gutter) 20px; background: #fff; }
 .primary {
   --background: #07080d;
   --color: #fff;
@@ -84,5 +69,24 @@ p { margin: 0; color: #6a6d75; font-size: 22px; line-height: 1.45; max-width: 52
   text-transform: none;
   font-size: 17px;
   font-weight: 600;
+}
+
+h2 { font-size: clamp(28px, 9vw, 40px); }
+p { font-size: clamp(16px, 5.5vw, 22px); }
+
+@media (max-width: 360px) {
+  .illustration {
+    width: 150px;
+    height: 150px;
+  }
+}
+
+@media (min-width: 768px) {
+  .offer-wrap,
+  .footer {
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 </style>

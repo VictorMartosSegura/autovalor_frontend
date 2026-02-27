@@ -1,6 +1,6 @@
 <template>
   <ion-page>
-    <ion-header class="ion-no-border">
+    <ion-header class="ion-no-border mobile-safe-header">
       <ion-toolbar>
         <ion-buttons slot="start">
           <ion-back-button :default-href="`/offer/${carId}`" text="" />
@@ -9,11 +9,9 @@
       </ion-toolbar>
     </ion-header>
 
-    <ion-content class="offer-page">
+    <ion-content class="offer-page mobile-safe-content">
       <div class="offer-wrap">
-        <div class="illustration" aria-hidden="true">
-          <div class="check-circle">?</div>
-        </div>
+        <img class="illustration" :src="acceptedOfferImg" alt="Offer accepted" />
 
         <h2>Congrats! Your offer has been accepted!</h2>
         <p>Your offer has been accepted by the seller for {{ formatPrice(price) }}</p>
@@ -31,6 +29,7 @@ import { IonBackButton, IonButton, IonButtons, IonContent, IonFooter, IonHeader,
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { CARS } from '@/data/cars';
+import acceptedOfferImg from '@/assets/images/acepted_offer.png';
 
 const route = useRoute();
 const router = useRouter();
@@ -57,24 +56,13 @@ function goCheckout() {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 24px;
+  padding: 24px var(--app-page-gutter);
   font-family: 'SF Pro Text', 'Segoe UI', Arial, sans-serif;
 }
-.illustration { width: 180px; height: 140px; display: grid; place-items: center; margin-bottom: 20px; }
-.check-circle {
-  width: 88px;
-  height: 88px;
-  border-radius: 50%;
-  border: 2px solid #252630;
-  display: grid;
-  place-items: center;
-  font-size: 48px;
-  font-weight: 700;
-  color: #111216;
-}
+.illustration { width: 170px; height: 170px; object-fit: contain; margin-bottom: 20px; }
 h2 { margin: 0 0 10px; font-size: 40px; line-height: 1.15; color: #202127; max-width: 560px; }
 p { margin: 0; color: #6a6d75; font-size: 22px; line-height: 1.45; max-width: 520px; }
-.footer { padding: 12px 20px 20px; background: #fff; }
+.footer { padding: 12px var(--app-page-gutter) 20px; background: #fff; }
 .primary {
   --background: #07080d;
   --color: #fff;
@@ -83,5 +71,24 @@ p { margin: 0; color: #6a6d75; font-size: 22px; line-height: 1.45; max-width: 52
   text-transform: none;
   font-size: 17px;
   font-weight: 600;
+}
+
+h2 { font-size: clamp(28px, 9vw, 40px); }
+p { font-size: clamp(16px, 5.5vw, 22px); }
+
+@media (max-width: 360px) {
+  .illustration {
+    width: 150px;
+    height: 150px;
+  }
+}
+
+@media (min-width: 768px) {
+  .offer-wrap,
+  .footer {
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 </style>

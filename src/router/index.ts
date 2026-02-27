@@ -17,6 +17,7 @@ const routes: Array<RouteRecordRaw> = [
     path: '/tabs/',
     component: TabsLayout,
     children: [
+      { path: '', redirect: '/tabs/home' },
       { path: 'home', component: () => import('@/views/HomePage.vue') },
       { path: 'wishlist', component: () => import('@/views/WishlistPage.vue') },
       { path: 'orders', component: () => import('@/views/OrdersPage.vue') },
@@ -28,6 +29,7 @@ const routes: Array<RouteRecordRaw> = [
   { path: '/car/:id', component: () => import('@/views/CarDetailPage.vue') },
   { path: '/offer/:id', component: () => import('@/views/OfferPage.vue') },
   { path: '/offer/:id/accepted', component: () => import('@/views/OfferAcceptedPage.vue') },
+  { path: '/chat/:id', component: () => import('@/views/ChatPage.vue') },
   { path: '/checkout', component: () => import('@/views/CheckoutPage.vue') },
   { path: '/shipping-address', component: () => import('@/views/ShippingAddressPage.vue') },
   { path: '/choose-shipping', component: () => import('@/views/ChooseShippingPage.vue') },

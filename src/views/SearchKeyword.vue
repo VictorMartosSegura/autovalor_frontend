@@ -8,8 +8,16 @@
           </ion-button>
 
           <div class="search-input-wrap">
-            <ion-icon :icon="searchOutline" class="search-icon" />
-            <ion-input v-model="query" placeholder="Search" class="search-input" @keydown.enter="goToResults" />
+            <button type="button" class="icon-btn" aria-label="Search" @click="goToResults()">
+              <ion-icon :icon="searchOutline" class="search-icon" />
+            </button>
+            <ion-input
+              v-model="query"
+              placeholder="Search"
+              class="search-input"
+              @keyup.enter="goToResults()"
+              @ionInput="onInput"
+            />
             <ion-icon :icon="optionsOutline" class="filter-icon" />
           </div>
         </div>
@@ -65,8 +73,17 @@ function removeItem(item: string) {
   recentKeywords.value = recentKeywords.value.filter((x) => x !== item);
 }
 
+function onInput(event: CustomEvent) {
+  const value = String((event.detail as { value?: string }).value ?? '');
+  query.value = value;
+}
+
 function goToResults(value?: string) {
   const q = (value ?? query.value).trim();
+  if (!q) return;
+  if (!recentKeywords.value.includes(q)) {
+    recentKeywords.value = [q, ...recentKeywords.value].slice(0, 10);
+  }
   router.push({ path: '/search/results', query: { q } });
 }
 </script>
@@ -78,7 +95,7 @@ function goToResults(value?: string) {
 
 .search-container {
   min-height: 100%;
-  padding: 18px 16px 24px;
+  padding: 42px 16px 24px;
   font-family: 'SF Pro Text', 'Segoe UI', Arial, sans-serif;
 }
 
@@ -110,6 +127,14 @@ function goToResults(value?: string) {
 .filter-icon {
   font-size: 18px;
   color: #1f222a;
+}
+
+.icon-btn {
+  border: 0;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  padding: 0;
 }
 
 .search-input {

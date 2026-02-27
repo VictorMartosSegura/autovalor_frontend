@@ -1,13 +1,13 @@
 <template>
   <ion-page>
-    <ion-header class="ion-no-border">
+    <ion-header class="ion-no-border mobile-safe-header">
       <ion-toolbar>
         <ion-buttons slot="start"><ion-back-button default-href="/payment-methods" text="" /></ion-buttons>
         <ion-title>Review Summary</ion-title>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content class="page" v-if="car">
+    <ion-content class="page mobile-safe-content" v-if="car">
       <div class="wrap">
         <div class="box order-box">
           <img :src="car.images[0]" :alt="car.brand" />
@@ -96,7 +96,7 @@ function confirmPayment() { router.push({ path: '/order-success', query: { car: 
 
 <style scoped>
 .page { --background: #fff; }
-.wrap { padding: 12px 16px 24px; font-family: 'SF Pro Text', 'Segoe UI', Arial, sans-serif; }
+.wrap { padding: 12px var(--app-page-gutter) 24px; font-family: 'SF Pro Text', 'Segoe UI', Arial, sans-serif; }
 .box { background: #f8f8f9; border-radius: 16px; padding: 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
 .order-box img { width: 84px; height: 58px; object-fit: contain; background: #efeff0; border-radius: 10px; padding: 4px; }
 strong { font-size: 15px; color: #202127; }
@@ -105,6 +105,25 @@ p { margin: 4px 0 0; color: #7b7f86; font-size: 12px; }
 .summary div { display: flex; justify-content: space-between; padding: 8px 0; color: #51545d; font-size: 14px; }
 .summary .total { border-top: 1px solid #ececee; margin-top: 4px; padding-top: 12px; color: #1f222a; font-weight: 700; }
 .change { border: 0; background: transparent; color: #202127; font-weight: 700; }
-.footer { padding: 12px 16px 20px; }
+.footer { padding: 12px var(--app-page-gutter) 20px; }
 .primary { --background: #07080d; --border-radius: 999px; height: 52px; text-transform: none; font-weight: 600; }
+
+@media (max-width: 360px) {
+  strong {
+    font-size: 14px;
+  }
+
+  .summary div {
+    font-size: 13px;
+  }
+}
+
+@media (min-width: 768px) {
+  .wrap,
+  .footer {
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
 </style>

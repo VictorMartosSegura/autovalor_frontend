@@ -43,5 +43,11 @@ export const useWishlistStore = defineStore('wishlist', {
       this.ids = [];
       await this._storage!.set(STORAGE_KEY, this.ids);
     },
+
+    async setOrder(ids: string[]) {
+      await this.init();
+      this.ids = [...ids];
+      await this._storage!.set(STORAGE_KEY, this.ids);
+    },
   },
 });

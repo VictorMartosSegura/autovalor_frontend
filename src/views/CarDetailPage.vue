@@ -1,9 +1,9 @@
 <template>
   <ion-page>
-    <ion-header class="ion-no-border">
-      <ion-toolbar>
+    <ion-header class="ion-no-border detail-header mobile-safe-header">
+      <ion-toolbar class="detail-toolbar">
         <ion-buttons slot="start">
-          <ion-back-button default-href="/tabs/home" text="Back" />
+          <ion-back-button default-href="/tabs/home" text="" />
         </ion-buttons>
         <ion-buttons slot="end">
           <ion-button v-if="car" fill="clear" @click="toggleWish">
@@ -13,9 +13,9 @@
       </ion-toolbar>
     </ion-header>
 
-    <ion-content v-if="car">
+    <ion-content v-if="car" class="detail-content">
       <div class="hero">
-        <Swiper ref="swiperRef" class="car-swiper" :loop="false" @slideChange="onSlideChange">
+        <Swiper ref="swiperRef" class="car-swiper" :loop="false" @swiper="onSwiperInit" @slideChange="onSlideChange">
           <SwiperSlide v-for="(img, idx) in car.images" :key="idx">
             <img :src="img" class="car-img" :alt="`${car.brand} ${car.model}`" />
           </SwiperSlide>
@@ -45,19 +45,28 @@
         <div class="section">
           <h3>Gallery Photos</h3>
           <div class="gallery">
-            <div v-for="(img, i) in gallery" :key="i" class="gallery-item">
+            <button
+              v-for="(img, i) in gallery"
+              :key="i"
+              type="button"
+              class="gallery-item"
+              :class="{ active: currentSlide === i }"
+              @click="goToSlide(i)"
+            >
               <img :src="img" :alt="`${car.brand} gallery ${i + 1}`" />
-            </div>
+            </button>
           </div>
         </div>
 
-        <div class="section">
-          <h3>Seller Information</h3>
+        <div class="section seller-section">
           <div class="seller-card">
             <div class="seller-info">
-              <div class="seller-logo">BMW</div>
+              <img class="seller-logo" :src="sellerLogo" :alt="`${car.brand} logo`" />
               <div class="seller-text">
-                <strong class="seller-name">{{ car.brand }} Store</strong>
+                <strong class="seller-name">
+                  {{ car.brand }} Store
+                  <ion-icon v-if="hasVerifiedBadge" class="verified-icon" :icon="checkmarkCircle" />
+                </strong>
                 <p class="seller-type">Official Dealer</p>
               </div>
               <div class="seller-actions">
@@ -71,14 +80,17 @@
             </div>
           </div>
 
-          <h3 style="margin-top: 20px;">Seller Location</h3>
+          <h3 class="seller-location-title">Seller Location</h3>
           <div ref="mapEl" class="map-container"></div>
         </div>
       </div>
     </ion-content>
 
     <ion-footer v-if="car" class="ion-no-border footer">
-      <div class="price">${{ formatPrice(car.price) }}</div>
+      <div class="price-block">
+        <span class="price-label">Price</span>
+        <div class="price">${{ formatPrice(car.price) }}</div>
+      </div>
       <ion-button class="buy-btn" @click="goToOffer">Buy the car</ion-button>
     </ion-footer>
 
@@ -108,8 +120,15 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { Swiper, SwiperSlide } from 'swiper/vue';
 import 'swiper/swiper-bundle.css';
 
-import { callOutline, chatbubbleOutline, heart, heartOutline, star } from 'ionicons/icons';
+import { callOutline, chatbubbleOutline, checkmarkCircle, heart, heartOutline, star } from 'ionicons/icons';
 import { useWishlistStore } from '@/stores/wishlist';
+import bmwStoreLogo from '@/assets/logos/bmwStore.png';
+import camaroStoreLogo from '@/assets/logos/camaroStore.png';
+import ferrariStoreLogo from '@/assets/logos/ferrariStore.png';
+import jaguarStoreLogo from '@/assets/logos/jaguarStore.png';
+import lamborghiniStoreLogo from '@/assets/logos/lamborghiniStore.png';
+import mclarenStoreLogo from '@/assets/logos/mclarenStore.png';
+import subaruStoreLogo from '@/assets/logos/subaruStore.png';
 
 const route = useRoute();
 const router = useRouter();
@@ -119,14 +138,42 @@ wishlist.init();
 const car = computed(() => CARS.find((c) => c.id === String(route.params.id)));
 const gallery = computed(() => (car.value ? car.value.images : []));
 const listed = computed(() => dayjs().format('DD MMM YYYY'));
+const sellerLogo = computed(() => {
+  if (!car.value) return bmwStoreLogo;
+
+  const logosByBrand: Record<string, string> = {
+    bmw: bmwStoreLogo,
+    ferrari: ferrariStoreLogo,
+    chevrolet: camaroStoreLogo,
+    jaguar: jaguarStoreLogo,
+    lamborghini: lamborghiniStoreLogo,
+    mclaren: mclarenStoreLogo,
+    subaru: subaruStoreLogo,
+  };
+
+  return logosByBrand[car.value.brand.toLowerCase()] ?? bmwStoreLogo;
+});
+const hasVerifiedBadge = computed(() => Boolean(car.value));
 
 const swiperRef = ref<any>(null);
+const swiperInstance = ref<any>(null);
 const currentSlide = ref(0);
 const mapEl = ref<HTMLElement | null>(null);
 let sellerMap: MapLibreMap | null = null;
 
 function onSlideChange(swiper: any) {
   currentSlide.value = swiper.realIndex;
+}
+
+function onSwiperInit(swiper: any) {
+  swiperInstance.value = swiper;
+}
+
+function goToSlide(index: number) {
+  const swiper = swiperInstance.value ?? swiperRef.value?.swiper;
+  if (!swiper) return;
+  swiper.slideTo(index);
+  currentSlide.value = index;
 }
 
 const sellerLocations: Record<string, [number, number]> = {
@@ -192,16 +239,39 @@ function formatPrice(n: number) {
 
 <style scoped>
 .hero {
-  width: 100vw;
-  margin-left: calc(-50vw + 50%);
-  background: #f7f7f7;
-  padding: 24px 16px;
+  background: #f6f6f7;
+  margin: 20px 14px 0;
+  border-radius: 22px;
+  padding: 18px 10px 24px;
   display: flex;
   justify-content: center;
   align-items: center;
-  border-bottom-left-radius: 24px;
-  border-bottom-right-radius: 24px;
   position: relative;
+}
+
+.detail-toolbar {
+  --background: #fff;
+  --padding-start: 10px;
+  --padding-end: 10px;
+  --padding-top: var(--app-safe-top);
+  --min-height: 68px;
+}
+
+.detail-toolbar ion-buttons[slot="start"],
+.detail-toolbar ion-buttons[slot="end"] {
+  margin-top: 14px;
+}
+
+.detail-header ion-back-button {
+  --color: #1f222a;
+}
+
+.detail-header ion-button {
+  --color: #1f222a;
+}
+
+.detail-content {
+  --padding-top: 6px;
 }
 
 .car-swiper {
@@ -210,16 +280,16 @@ function formatPrice(n: number) {
 
 .pager {
   position: absolute;
-  bottom: 8px;
+  bottom: 10px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 6px;
+  gap: 7px;
 }
 
 .pager span {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   background: rgba(0, 0, 0, 0.3);
   border-radius: 50%;
 }
@@ -230,43 +300,46 @@ function formatPrice(n: number) {
 
 .car-img {
   width: 100%;
-  max-width: 400px;
-  height: 280px;
+  max-width: 340px;
+  height: 210px;
   object-fit: contain;
 }
 
 .content-section {
-  padding: 16px;
+  padding: 10px 18px 0;
 }
 
 .title {
-  margin: 20px 0 4px;
-  font-size: 32px;
-  font-weight: 900;
+  margin: 18px 0 2px;
+  font-size: clamp(30px, 8vw, 38px);
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+  font-weight: 800;
   color: #1a1a1a;
 }
 
 .listed {
   font-size: 12px;
-  color: #999;
-  margin: 0 0 8px;
+  color: #969aa2;
+  margin: 0 0 10px;
 }
 
 .subtitle {
   display: flex;
   gap: 12px;
   align-items: center;
-  color: #666;
+  color: #6b7179;
   font-size: 13px;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .condition-badge {
-  background: #f0f0f0;
-  padding: 4px 10px;
-  border-radius: 12px;
+  background: #eff0f2;
+  padding: 5px 11px;
+  border-radius: 8px;
   color: #1a1a1a;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .rating {
@@ -277,43 +350,48 @@ function formatPrice(n: number) {
 
 .rating ion-icon {
   color: #ff9500;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .section {
-  margin: 20px 0;
+  margin: 18px 0;
 }
 
 .section h3 {
-  font-size: 14px;
+  font-size: 16px;
+  line-height: 1.15;
   font-weight: 700;
-  margin: 0 0 10px;
+  letter-spacing: 0;
+  margin: 0 0 12px;
   color: #1a1a1a;
 }
 
 .description {
-  color: #666;
-  font-size: 12px;
-  line-height: 1.6;
+  color: #636a73;
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 0;
 }
 
 .gallery {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   overflow-x: auto;
-  padding-bottom: 8px;
+  padding-bottom: 4px;
 }
 
 .gallery-item {
   flex-shrink: 0;
-  width: 80px;
-  height: 60px;
-  background: #f0f0f0;
-  border-radius: 12px;
-  padding: 6px;
+  width: 68px;
+  height: 42px;
+  background: #efeff1;
+  border-radius: 8px;
+  padding: 1px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border: 1px solid transparent;
+  cursor: pointer;
 }
 
 .gallery-item img {
@@ -322,26 +400,27 @@ function formatPrice(n: number) {
   object-fit: contain;
 }
 
+.gallery-item.active {
+  border-color: #1f222a;
+}
+
 .seller-card {
-  background: #f8f8f8;
-  border-radius: 12px;
-  padding: 14px;
+  background: #f5f5f6;
+  border-radius: 14px;
+  padding: 10px 12px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .seller-logo {
-  width: 50px;
-  height: 50px;
-  background: #1a1a1a;
-  color: #fff;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 12px;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  object-fit: contain;
+  padding: 4px;
+  border: 1px solid #e7e7ea;
+  background: #fff;
 }
 
 .seller-info {
@@ -354,32 +433,65 @@ function formatPrice(n: number) {
 .seller-text {
   display: flex;
   flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
 }
 
 .seller-name {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 5px;
   font-size: 14px;
+  font-weight: 700;
   color: #1a1a1a;
   margin: 0;
+  line-height: 1.2;
+}
+
+.verified-icon {
+  color: #2378ff;
+  font-size: 11px;
+  transform: translateY(1px);
 }
 
 .seller-type {
-  margin: 4px 0 0;
+  margin: 0;
   font-size: 12px;
-  color: #999;
+  color: #8a8f97;
+  line-height: 1.2;
 }
 
 .seller-actions {
   display: flex;
-  gap: 6px;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.seller-actions ion-button {
+  --color: #1c2128;
+  --padding-start: 6px;
+  --padding-end: 6px;
+  min-height: 30px;
+  min-width: 30px;
+  margin: 0;
+}
+
+.seller-section {
+  margin-top: 20px;
+}
+
+.seller-location-title {
+  margin-top: 16px !important;
 }
 
 .map-container {
   width: 100%;
-  height: 220px;
-  border-radius: 12px;
+  height: 180px;
+  border-radius: 16px;
   overflow: hidden;
-  margin-top: 10px;
+  margin-top: 4px;
   border: 1px solid #eee;
 }
 
@@ -387,21 +499,90 @@ function formatPrice(n: number) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px 20px;
+  padding: 12px 18px 20px;
   background: #fff;
   border-top: 1px solid #f0f0f0;
 }
 
+.price-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.price-label {
+  font-size: 12px;
+  color: #9a9ea6;
+}
+
 .price {
-  font-size: 24px;
-  font-weight: 900;
+  font-size: clamp(28px, 8vw, 40px);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-weight: 800;
   color: #1a1a1a;
 }
 
 .buy-btn {
   --background: #1a1a1a;
-  --border-radius: 28px;
+  --border-radius: 999px;
+  --padding-start: 28px;
+  --padding-end: 28px;
   font-weight: 700;
-  padding: 0 24px;
+  min-height: 46px;
+}
+
+@media (max-width: 430px) {
+  .hero {
+    margin-top: 14px;
+    padding: 14px 8px 22px;
+  }
+
+  .car-img {
+    height: 182px;
+  }
+
+  .title {
+    font-size: clamp(26px, 9vw, 32px);
+  }
+
+  .footer {
+    padding: 10px 14px 16px;
+  }
+
+  .buy-btn {
+    --padding-start: 20px;
+    --padding-end: 20px;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 360px) {
+  .content-section {
+    padding: 8px 14px 0;
+  }
+
+  .subtitle {
+    gap: 8px;
+    font-size: 12px;
+  }
+
+  .seller-name {
+    font-size: 13px;
+  }
+
+  .price {
+    font-size: 26px;
+  }
+}
+
+@media (min-width: 768px) {
+  .hero,
+  .content-section,
+  .footer {
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 </style>

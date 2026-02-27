@@ -21,7 +21,7 @@
 
         <div class="result-head">
           <p class="result-title">Results for "{{ query || 'Sports Car' }}"</p>
-          <p class="result-count">9,275 founds</p>
+          <p class="result-count">{{ matchesCount }} found</p>
         </div>
 
         <div class="results-grid">
@@ -52,6 +52,7 @@ import { IonButton, IonContent, IonIcon, IonInput, IonPage } from '@ionic/vue';
 import { arrowBackOutline, heart, heartOutline, optionsOutline, searchOutline, star } from 'ionicons/icons';
 import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import Fuse from 'fuse.js';
 import { CARS } from '@/data/cars';
 import { useWishlistStore } from '@/stores/wishlist';
 
@@ -61,17 +62,36 @@ const wishlist = useWishlistStore();
 wishlist.init();
 
 const query = ref(String(route.query.q ?? 'Sports Car'));
+const fuse = new Fuse(CARS, {
+  includeScore: true,
+  threshold: 0.35,
+  ignoreLocation: true,
+  keys: [
+    { name: 'brand', weight: 0.35 },
+    { name: 'model', weight: 0.35 },
+    { name: 'type', weight: 0.2 },
+    { name: 'condition', weight: 0.1 },
+  ],
+});
 
 const filteredCars = computed(() => {
   const q = query.value.trim().toLowerCase();
   if (!q) return CARS.slice(0, 6);
 
-  const list = CARS.filter((c) => {
+  const fuzzy = fuse.search(q).map((r) => r.item);
+  const list = fuzzy.length ? fuzzy : CARS.filter((c) => {
     const full = `${c.brand} ${c.model} ${c.type}`.toLowerCase();
     return full.includes(q);
   });
 
   return (list.length ? list : CARS).slice(0, 6);
+});
+
+const matchesCount = computed(() => {
+  const q = query.value.trim();
+  if (!q) return CARS.length;
+  const fuzzy = fuse.search(q).length;
+  return fuzzy || CARS.filter((c) => `${c.brand} ${c.model} ${c.type}`.toLowerCase().includes(q.toLowerCase())).length;
 });
 
 function applySearch() {
@@ -110,7 +130,7 @@ function formatName(brand: string, model: string) {
 
 .results-container {
   min-height: 100%;
-  padding: 18px 16px 24px;
+  padding: 42px 16px 24px;
   font-family: 'SF Pro Text', 'Segoe UI', Arial, sans-serif;
 }
 

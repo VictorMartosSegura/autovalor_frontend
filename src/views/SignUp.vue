@@ -32,8 +32,10 @@
           </div>
 
           <div class="input-box">
-            <ion-input v-model="birthDate" placeholder="01/01/2001" />
-            <ion-icon :icon="calendarOutline" class="input-icon" />
+            <ion-input :value="birthDate" placeholder="01/01/2001" readonly @click="openBirthDatePicker" />
+            <button type="button" class="calendar-trigger" aria-label="Choose birth date" @click="openBirthDatePicker">
+              <ion-icon :icon="calendarOutline" class="input-icon" />
+            </button>
           </div>
 
           <div class="input-box">
@@ -58,6 +60,27 @@
         <ion-button expand="block" class="continue-btn" @click="goToNextStep">Continue</ion-button>
       </div>
     </ion-content>
+
+    <ion-popover
+      :is-open="isBirthDateModalOpen"
+      class="birthdate-popover"
+      @didDismiss="closeBirthDatePicker"
+    >
+      <div class="birthdate-popover-body">
+        <h3 class="birthdate-popover-title">Select your birth date</h3>
+        <DatePicker
+          v-model="draftBirthDateValue"
+          inline
+          :max-date="new Date()"
+          date-format="dd/mm/yy"
+          class="birthdate-prime-calendar"
+        />
+        <div class="birthdate-popover-actions">
+          <ion-button fill="clear" size="small" @click="closeBirthDatePicker">Cancel</ion-button>
+          <ion-button fill="solid" size="small" @click="confirmBirthDate">Done</ion-button>
+        </div>
+      </div>
+    </ion-popover>
   </ion-page>
 </template>
 
@@ -71,8 +94,10 @@ import {
   IonIcon,
   IonInput,
   IonPage,
+  IonPopover,
   IonToolbar,
 } from '@ionic/vue';
+import DatePicker from 'primevue/datepicker';
 import { calendarOutline, chevronDown, create, mail, person, personOutline } from 'ionicons/icons';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -82,9 +107,35 @@ const router = useRouter();
 const fullName = ref('');
 const username = ref('');
 const birthDate = ref('');
+const birthDateISO = ref('');
+const birthDateValue = ref<Date | null>(null);
+const draftBirthDateValue = ref<Date | null>(null);
+const isBirthDateModalOpen = ref(false);
 const email = ref('');
 const phone = ref('');
 const gender = ref('');
+
+function openBirthDatePicker() {
+  draftBirthDateValue.value = birthDateValue.value ? new Date(birthDateValue.value) : new Date();
+  isBirthDateModalOpen.value = true;
+}
+
+function closeBirthDatePicker() {
+  isBirthDateModalOpen.value = false;
+}
+
+function confirmBirthDate() {
+  const selected = draftBirthDateValue.value;
+  if (!selected) return;
+
+  birthDateValue.value = selected;
+  const year = selected.getFullYear();
+  const month = String(selected.getMonth() + 1).padStart(2, '0');
+  const day = String(selected.getDate()).padStart(2, '0');
+  birthDateISO.value = `${year}-${month}-${day}`;
+  birthDate.value = `${day}/${month}/${year}`;
+  closeBirthDatePicker();
+}
 
 function goToNextStep() {
   router.push('/createnewpassword');
@@ -203,6 +254,42 @@ ion-back-button {
   color: #a2a4aa;
   font-size: 18px;
   flex-shrink: 0;
+}
+
+.calendar-trigger {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:global(.birthdate-popover::part(content)) {
+  width: min(332px, calc(100vw - 24px));
+  border-radius: 16px;
+}
+
+.birthdate-popover-body {
+  padding: 14px;
+}
+
+.birthdate-popover-title {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f222a;
+}
+
+:global(.birthdate-prime-calendar .p-datepicker) {
+  border: 0;
+}
+
+.birthdate-popover-actions {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
 }
 
 .phone-box {

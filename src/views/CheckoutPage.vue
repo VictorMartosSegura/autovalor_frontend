@@ -1,13 +1,13 @@
 <template>
   <ion-page>
-    <ion-header class="ion-no-border">
+    <ion-header class="ion-no-border mobile-safe-header">
       <ion-toolbar>
         <ion-buttons slot="start"><ion-back-button default-href="/tabs/home" text="" /></ion-buttons>
         <ion-title>Checkout</ion-title>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content class="checkout-page" v-if="car">
+    <ion-content class="checkout-page mobile-safe-content" v-if="car">
       <div class="wrap">
         <h3>Shipping Address</h3>
         <button class="box" @click="goAddress">
@@ -106,7 +106,7 @@ function goPayment() {
 
 <style scoped>
 .checkout-page { --background: #fff; }
-.wrap { padding: 12px 16px 24px; font-family: 'SF Pro Text', 'Segoe UI', Arial, sans-serif; }
+.wrap { padding: 12px var(--app-page-gutter) 24px; font-family: 'SF Pro Text', 'Segoe UI', Arial, sans-serif; }
 h3 { margin: 10px 0; color: #23242b; font-size: 15px; }
 .box {
   width: 100%; border: 0; text-align: left; background: #f8f8f9; border-radius: 16px;
@@ -120,6 +120,20 @@ h3 { margin: 10px 0; color: #23242b; font-size: 15px; }
 .summary { display: block; }
 .summary div { display: flex; justify-content: space-between; padding: 8px 0; color: #51545d; font-size: 14px; }
 .summary .total { border-top: 1px solid #ececee; margin-top: 4px; padding-top: 12px; color: #1f222a; font-weight: 700; }
-.footer { padding: 12px 16px 20px; background: #fff; }
+.footer { padding: 12px var(--app-page-gutter) 20px; background: #fff; }
 .primary { --background: #33353b; --color: #fff; --border-radius: 12px; height: 50px; text-transform: none; font-weight: 600; }
+
+@media (max-width: 360px) {
+  .price { font-size: 22px; }
+  .box strong { font-size: 14px; }
+}
+
+@media (min-width: 768px) {
+  .wrap,
+  .footer {
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
 </style>

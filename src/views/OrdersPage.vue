@@ -1,6 +1,6 @@
 <template>
   <ion-page>
-    <ion-header class="ion-no-border orders-header">
+    <ion-header class="ion-no-border orders-header mobile-safe-header">
       <ion-toolbar>
         <div class="head-row">
           <div class="brand-row">
@@ -58,7 +58,7 @@
 import { IonPage, IonHeader, IonToolbar, IonContent, IonButton, IonIcon, IonToast } from '@ionic/vue';
 import { addOutline, ellipsisHorizontal } from 'ionicons/icons';
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 import logo from '@/assets/logos/autovalor_logo.png';
 import bmw from '@/assets/cars/bmw_m5.png';
@@ -68,7 +68,11 @@ import subaru from '@/assets/cars/subaru_wrx.png';
 import jaguar from '@/assets/cars/jaguar_f_type.png';
 
 const router = useRouter();
-const segment = ref<'active' | 'history'>('history');
+const route = useRoute();
+const storedSegment = window.sessionStorage.getItem('orders_default_segment');
+if (storedSegment) window.sessionStorage.removeItem('orders_default_segment');
+const initialSegment = (storedSegment === 'active' || String(route.query.segment ?? 'history') === 'active') ? 'active' : 'history';
+const segment = ref<'active' | 'history'>(initialSegment);
 
 const activeOrder = {
   title: 'BMW M5 Series',
@@ -126,7 +130,7 @@ function onTouchEnd(event: TouchEvent) {
 <style scoped>
 .orders-header ion-toolbar {
   --background: #ffffff;
-  padding: 56px 14px 0;
+  padding: var(--app-safe-top) var(--app-page-gutter) 0;
 }
 
 .head-row {
@@ -152,7 +156,7 @@ function onTouchEnd(event: TouchEvent) {
 h1 {
   margin: 0;
   color: #1f222a;
-  font-size: 30px;
+  font-size: clamp(24px, 7vw, 30px);
   line-height: 1;
   font-weight: 700;
   white-space: nowrap;
@@ -207,7 +211,7 @@ h1 {
 }
 
 .list-wrap {
-  padding: 12px 12px 20px;
+  padding: 12px var(--app-page-gutter) 20px;
 }
 
 .order-card {
@@ -285,5 +289,34 @@ strong {
   font-size: 12px;
   border-radius: 999px;
   padding: 7px 12px;
+}
+
+@media (max-width: 360px) {
+  .head-row {
+    margin-bottom: 18px;
+  }
+
+  .car-img {
+    width: 82px;
+    height: 56px;
+  }
+
+  .order-info h3 {
+    font-size: 15px;
+  }
+
+  .pill {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+}
+
+@media (min-width: 768px) {
+  .orders-header ion-toolbar,
+  .list-wrap {
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 </style>

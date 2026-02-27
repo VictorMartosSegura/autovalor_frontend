@@ -1,6 +1,6 @@
 <template>
   <ion-page>
-    <ion-header class="ion-no-border">
+    <ion-header class="ion-no-border mobile-safe-header">
       <ion-toolbar class="track-toolbar">
         <ion-buttons slot="start"><ion-back-button default-href="/tabs/orders" text="" /></ion-buttons>
         <ion-title>Track Order</ion-title>
@@ -67,11 +67,14 @@ const steps = [
 </script>
 
 <style scoped>
-.track-toolbar { --background: #fff; }
+.track-toolbar {
+  --background: #fff;
+  padding-top: var(--app-safe-top);
+}
 .track-toolbar ion-title { font-size: 16px; font-weight: 700; color: #1f222a; }
 .track-toolbar ion-button { --color: #1f222a; }
 .track-content { --background: #fff; }
-.wrap { padding: 12px 16px 24px; font-family: 'SF Pro Text', 'Segoe UI', Arial, sans-serif; }
+.wrap { padding: 18px var(--app-page-gutter) 24px; font-family: 'SF Pro Text', 'Segoe UI', Arial, sans-serif; }
 .summary-card { background: #f8f8f9; border-radius: 16px; padding: 12px; display: flex; gap: 10px; }
 .summary-card img { width: 82px; height: 58px; object-fit: contain; background: #efeff0; border-radius: 10px; padding: 4px; }
 .summary-card h3 { margin: 0; font-size: 16px; color: #1f222a; }
@@ -93,4 +96,17 @@ h4 { margin: 18px 0 10px; color: #1f222a; font-size: 15px; }
 .tl-title-row strong { font-size: 14px; color: #1f222a; }
 .tl-title-row span { font-size: 11px; color: #8b8f97; }
 .tl-body p { margin: 4px 0 0; font-size: 12px; color: #8b8f97; }
+
+@media (max-width: 360px) {
+  .summary-card h3 { font-size: 15px; }
+  .summary-card strong { font-size: 16px; }
+  .tl-title-row strong { font-size: 13px; }
+}
+
+@media (min-width: 768px) {
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+  }
+}
 </style>

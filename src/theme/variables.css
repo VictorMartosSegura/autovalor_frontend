@@ -1,2 +1,46 @@
 /* For information on how to create your own theme, please refer to:
 http://ionicframework.com/docs/theming/ */
+
+:root {
+  --app-safe-top: max(18px, env(safe-area-inset-top));
+  --app-content-top: 14px;
+  --app-page-gutter: 16px;
+}
+
+/* Reusable mobile safe-area spacing for pages that feel too close to the top edge */
+ion-header.mobile-safe-header ion-toolbar {
+  --padding-top: var(--app-safe-top);
+  --min-height: 66px;
+}
+
+ion-content.mobile-safe-content {
+  --padding-top: var(--app-content-top);
+}
+
+@media (max-width: 360px) {
+  :root {
+    --app-safe-top: max(14px, env(safe-area-inset-top));
+    --app-content-top: 10px;
+    --app-page-gutter: 12px;
+  }
+}
+
+@media (min-width: 768px) {
+  :root {
+    --app-safe-top: max(24px, env(safe-area-inset-top));
+    --app-content-top: 18px;
+    --app-page-gutter: 20px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  :root {
+    --app-safe-top: max(10px, env(safe-area-inset-top));
+    --app-content-top: 8px;
+    --app-page-gutter: 14px;
+  }
+
+  ion-header.mobile-safe-header ion-toolbar {
+    --min-height: 56px;
+  }
+}
