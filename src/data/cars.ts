@@ -9,6 +9,7 @@ export type Car = {
   price: number;
   rating: number;
   images: string[];
+  condition?: 'New' | 'Used';
 };
 
 export const CARS: Car[] = [
@@ -19,7 +20,8 @@ export const CARS: Car[] = [
     type: 'Sedan',
     price: 175000,
     rating: 4.8,
-    images: [img('bmw_m5.png')],
+    condition: 'New',
+    images: [img('bmw_m5.png'), img('bmw_m5_1.png')],
   },
   {
     id: 'ferrari-race',
@@ -28,7 +30,8 @@ export const CARS: Car[] = [
     type: 'Sports',
     price: 185000,
     rating: 4.9,
-    images: [img('ferrari_race.png')],
+    condition: 'Used',
+    images: [img('ferrari_race.png'), img('ferrari_race1.png')],
   },
   {
     id: 'camaro',
@@ -37,7 +40,8 @@ export const CARS: Car[] = [
     type: 'Coupe',
     price: 170000,
     rating: 4.7,
-    images: [img('chevrolet_camaro.png')],
+    condition: 'New',
+    images: [img('chevrolet_camaro.png'), img('chevrolet_camaro1.png')],
   },
   {
     id: 'mclaren-720',
@@ -46,7 +50,8 @@ export const CARS: Car[] = [
     type: 'Sports',
     price: 250000,
     rating: 4.9,
-    images: [img('mclaren_720s.png')], 
+    condition: 'Used',
+    images: [img('mclaren_720s.png'), img('mclaren_720s1.png')], 
   },
   {
     id: 'subaru-wrx',
@@ -55,7 +60,8 @@ export const CARS: Car[] = [
     type: 'Sedan',
     price: 95000,
     rating: 4.6,
-    images: [img('subaru_wrx.png')],
+    condition: 'Used',
+    images: [img('subaru_wrx.png'), img('subaru_wrx1.png')],
   },
   {
     id: 'lamborghini',
@@ -64,7 +70,8 @@ export const CARS: Car[] = [
     type: 'Sports',
     price: 320000,
     rating: 5.0,
-    images: [img('lamborghini_huracan.png')],
+    condition: 'New',
+    images: [img('lamborghini_huracan.png'), img('lamborghini_huracan1.png')],
   },
   {
     id: 'mclaren-black',
@@ -73,7 +80,8 @@ export const CARS: Car[] = [
     type: 'Sports',
     price: 280000,
     rating: 4.9,
-    images: [img('mclaren_black.png')],
+    condition: 'Used',
+    images: [img('mclaren_black.png'), img('mclaren_black1.png')],
   },
   {
     id: 'jaguar',
@@ -82,6 +90,7 @@ export const CARS: Car[] = [
     type: 'Coupe',
     price: 145000,
     rating: 4.7,
-    images: [img('jaguar_f_type.png')],
+    condition: 'New',
+    images: [img('jaguar_f_type.png'), img('jaguar_f_type1.png')],
   },
 ];

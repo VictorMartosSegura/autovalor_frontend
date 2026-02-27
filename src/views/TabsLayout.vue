@@ -5,13 +5,18 @@
 
       <ion-tab-bar slot="bottom" class="custom-tabbar">
         <ion-tab-button tab="home" href="/tabs/home">
-          <ion-icon :icon="homeOutline" />
+          <ion-icon :icon="home" />
           <ion-label>Home</ion-label>
         </ion-tab-button>
 
         <ion-tab-button tab="orders" href="/tabs/orders">
-          <ion-icon :icon="bagHandleOutline" />
+          <ion-icon :icon="receiptOutline" />
           <ion-label>Orders</ion-label>
+        </ion-tab-button>
+
+        <ion-tab-button tab="sell" href="/tabs/sell">
+          <ion-icon :icon="walletOutline" />
+          <ion-label>Sell</ion-label>
         </ion-tab-button>
 
         <ion-tab-button tab="messages" href="/tabs/messages">
@@ -40,22 +45,29 @@ import {
 } from '@ionic/vue';
 
 import {
-  homeOutline,
-  bagHandleOutline,
-  personOutline,
   chatbubbleEllipsesOutline,
+  home,
+  personOutline,
+  receiptOutline,
+  walletOutline,
 } from 'ionicons/icons';
 </script>
 <style scoped>
 .custom-tabbar {
+  --background: #ffffff;
   --border: 0;
-  border-top: 1px solid #f1f1f1;
+  border-top: 1px solid #f0f1f3;
   padding-top: 4px;
+  padding-bottom: 2px;
 }
+
 ion-tab-button {
-  --color-selected: #0a0a0a;
-  --color: #9c9c9c;
+  --color-selected: #111216;
+  --color: #a4a7ae;
   font-size: 10px;
 }
-ion-icon { font-size: 18px; }
+
+ion-tab-button ion-icon {
+  font-size: 18px;
+}
 </style>

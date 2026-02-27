@@ -3,44 +3,48 @@
     <ion-header class="ion-no-border">
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button :default-href="`/car/${carId}`" text="" />
+          <ion-back-button :default-href="`/offer/${carId}`" text="" />
         </ion-buttons>
-        <ion-title>Make an Offer</ion-title>
+        <ion-title>Your Offer</ion-title>
       </ion-toolbar>
     </ion-header>
 
     <ion-content class="offer-page">
       <div class="offer-wrap">
         <div class="illustration" aria-hidden="true">
-          <div class="clock">
-            <div class="clock-hand one"></div>
-            <div class="clock-hand two"></div>
-          </div>
+          <div class="check-circle">?</div>
         </div>
 
-        <h2>Your offer is being processed</h2>
-        <p>
-          Please check notifications periodically to see if your offer was accepted or rejected by the seller.
-        </p>
+        <h2>Congrats! Your offer has been accepted!</h2>
+        <p>Your offer has been accepted by the seller for {{ formatPrice(price) }}</p>
       </div>
     </ion-content>
 
     <ion-footer class="ion-no-border footer">
-      <ion-button expand="block" class="primary" @click="goAccepted">Back to Home</ion-button>
+      <ion-button expand="block" class="primary" @click="goCheckout">Proceed to Checkout</ion-button>
     </ion-footer>
   </ion-page>
 </template>
 
 <script setup lang="ts">
 import { IonBackButton, IonButton, IonButtons, IonContent, IonFooter, IonHeader, IonPage, IonTitle, IonToolbar } from '@ionic/vue';
+import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { CARS } from '@/data/cars';
 
 const route = useRoute();
 const router = useRouter();
 const carId = String(route.params.id);
 
-function goAccepted() {
-  router.push(`/offer/${carId}/accepted`);
+const car = computed(() => CARS.find((c) => c.id === carId));
+const price = computed(() => car.value?.price ?? 170000);
+
+function formatPrice(value: number) {
+  return `$${value.toLocaleString('en-US')}`;
+}
+
+function goCheckout() {
+  router.push({ path: '/checkout', query: { car: carId } });
 }
 </script>
 
@@ -56,24 +60,19 @@ function goAccepted() {
   padding: 24px;
   font-family: 'SF Pro Text', 'Segoe UI', Arial, sans-serif;
 }
-.illustration {
-  width: 180px;
-  height: 140px;
+.illustration { width: 180px; height: 140px; display: grid; place-items: center; margin-bottom: 20px; }
+.check-circle {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  border: 2px solid #252630;
   display: grid;
   place-items: center;
-  margin-bottom: 20px;
+  font-size: 48px;
+  font-weight: 700;
+  color: #111216;
 }
-.clock {
-  width: 94px;
-  height: 94px;
-  border-radius: 50%;
-  border: 4px solid #4e4e68;
-  position: relative;
-}
-.clock-hand { position: absolute; left: 50%; top: 50%; height: 3px; background: #4e4e68; transform-origin: left center; border-radius: 2px; }
-.clock-hand.one { width: 26px; transform: translate(-2px, -2px) rotate(20deg); }
-.clock-hand.two { width: 34px; transform: translate(-2px, -2px) rotate(210deg); }
-h2 { margin: 0 0 10px; font-size: 40px; line-height: 1.15; color: #202127; }
+h2 { margin: 0 0 10px; font-size: 40px; line-height: 1.15; color: #202127; max-width: 560px; }
 p { margin: 0; color: #6a6d75; font-size: 22px; line-height: 1.45; max-width: 520px; }
 .footer { padding: 12px 20px 20px; background: #fff; }
 .primary {
