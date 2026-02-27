@@ -140,7 +140,8 @@ function loginWithApple() {
 .header-flat ion-toolbar {
   --background: #ffffff;
   --border-width: 0;
-  --min-height: 56px;
+  --min-height: 84px;
+  --padding-top: 16px;
   --padding-start: 8px;
   --padding-end: 8px;
   --box-shadow: none;

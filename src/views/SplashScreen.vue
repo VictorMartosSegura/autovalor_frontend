@@ -18,7 +18,7 @@ const router = useRouter();
 onMounted(() => {
   setTimeout(() => {
     router.replace('/letsyouin');
-  }, 10000); // 10 segundos
+  }, 5000); // 5 segundos
 });
 </script>
 
