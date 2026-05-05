@@ -1,0 +1,114 @@
+import { defineStore } from 'pinia';
+import { Storage } from '@ionic/storage';
+import { authService, type AuthResponse, type LoginRequest, type RegisterRequest, type UserResponse } from '@/services/authService';
+
+const TOKEN_KEY = 'autovalor_auth_token';
+const USER_KEY = 'autovalor_auth_user';
+
+export const useAuthStore = defineStore('auth', {
+  state: () => ({
+    token: null as string | null,
+    user: null as UserResponse | null,
+    ready: false,
+    loading: false,
+    error: '' as string,
+    _storage: null as Storage | null,
+  }),
+
+  getters: {
+    isAuthenticated: (state) => Boolean(state.token),
+    isAdmin: (state) => state.user?.role === 'ADMIN',
+  },
+
+  actions: {
+    async init() {
+      if (this.ready) return;
+
+      const storage = new Storage();
+      this._storage = await storage.create();
+      this.token = await this._storage.get(TOKEN_KEY);
+      this.user = await this._storage.get(USER_KEY);
+      this.ready = true;
+
+      if (this.token) {
+        try {
+          this.user = await authService.me(this.token);
+          await this.persist();
+        } catch {
+          await this.logout();
+        }
+      }
+    },
+
+    async login(payload: LoginRequest) {
+      this.loading = true;
+      this.error = '';
+      try {
+        const response = await authService.login(payload);
+        await this.setSession(response);
+        return response;
+      } catch (error: any) {
+        this.error = error?.message || 'No se pudo iniciar sesion';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async register(payload: RegisterRequest) {
+      this.loading = true;
+      this.error = '';
+      try {
+        const response = await authService.register(payload);
+        await this.setSession(response);
+        return response;
+      } catch (error: any) {
+        this.error = error?.message || 'No se pudo crear la cuenta';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async refreshMe() {
+      await this.init();
+      if (!this.token) return null;
+      this.user = await authService.me(this.token);
+      await this.persist();
+      return this.user;
+    },
+
+    async setSession(response: AuthResponse) {
+      await this.ensureStorage();
+      this.token = response.token;
+      this.user = {
+        id: response.id,
+        name: response.name,
+        email: response.email,
+        role: response.role,
+      };
+      await this.persist();
+    },
+
+    async persist() {
+      await this.ensureStorage();
+      await this._storage!.set(TOKEN_KEY, this.token);
+      await this._storage!.set(USER_KEY, this.user);
+    },
+
+    async logout() {
+      await this.ensureStorage();
+      this.token = null;
+      this.user = null;
+      this.error = '';
+      await this._storage!.remove(TOKEN_KEY);
+      await this._storage!.remove(USER_KEY);
+    },
+
+    async ensureStorage() {
+      if (this._storage) return;
+      const storage = new Storage();
+      this._storage = await storage.create();
+    },
+  },
+});
