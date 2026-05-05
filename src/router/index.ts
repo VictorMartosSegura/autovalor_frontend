@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from '@ionic/vue-router';
 import { RouteRecordRaw } from 'vue-router';
 import TabsLayout from '@/views/TabsLayout.vue';
+import { useAuthStore } from '@/stores/auth';
 
 const routes: Array<RouteRecordRaw> = [
   { path: '/', redirect: '/splash' },
@@ -9,39 +10,59 @@ const routes: Array<RouteRecordRaw> = [
   { path: '/signup', component: () => import('@/views/SignUp.vue') },
   { path: '/search', component: () => import('@/views/SearchKeyword.vue') },
   { path: '/search/results', component: () => import('@/views/SearchResults.vue') },
-  { path: '/profileblank', component: () => import('@/views/ProfileBlankForm.vue') },
+  { path: '/profileblank', component: () => import('@/views/ProfileBlankForm.vue'), meta: { requiresAuth: true } },
   { path: '/createnewpassword', component: () => import('@/views/CreateNewPassword.vue') },
   { path: '/signin', component: () => import('@/views/SignIn.vue') },
-  { path: '/profile/edit', component: () => import('@/views/EditProfile.vue') },
+  { path: '/profile/edit', component: () => import('@/views/EditProfile.vue'), meta: { requiresAuth: true } },
   {
     path: '/tabs/',
     component: TabsLayout,
     children: [
       { path: '', redirect: '/tabs/home' },
       { path: 'home', component: () => import('@/views/HomePage.vue') },
-      { path: 'wishlist', component: () => import('@/views/WishlistPage.vue') },
-      { path: 'orders', component: () => import('@/views/OrdersPage.vue') },
-      { path: 'sell', component: () => import('@/views/OrdersPage.vue') },
-      { path: 'messages', component: () => import('@/views/MessagesPage.vue') },
-      { path: 'profile', component: () => import('@/views/ProfilePage.vue') },
+      { path: 'wishlist', component: () => import('@/views/WishlistPage.vue'), meta: { requiresAuth: true } },
+      { path: 'orders', component: () => import('@/views/OrdersPage.vue'), meta: { requiresAuth: true } },
+      { path: 'sell', component: () => import('@/views/SellCarPage.vue'), meta: { requiresAuth: true } },
+      { path: 'messages', component: () => import('@/views/MessagesPage.vue'), meta: { requiresAuth: true } },
+      { path: 'profile', component: () => import('@/views/ProfilePage.vue'), meta: { requiresAuth: true } },
     ],
   },
   { path: '/car/:id', component: () => import('@/views/CarDetailPage.vue') },
-  { path: '/offer/:id', component: () => import('@/views/OfferPage.vue') },
-  { path: '/offer/:id/accepted', component: () => import('@/views/OfferAcceptedPage.vue') },
-  { path: '/chat/:id', component: () => import('@/views/ChatPage.vue') },
-  { path: '/checkout', component: () => import('@/views/CheckoutPage.vue') },
-  { path: '/shipping-address', component: () => import('@/views/ShippingAddressPage.vue') },
-  { path: '/choose-shipping', component: () => import('@/views/ChooseShippingPage.vue') },
-  { path: '/payment-methods', component: () => import('@/views/PaymentMethodsPage.vue') },
-  { path: '/review-summary', component: () => import('@/views/ReviewSummaryPage.vue') },
-  { path: '/order-success', component: () => import('@/views/OrderSuccessPage.vue') },
-  { path: '/orders/:id', component: () => import('@/views/OrderTrackPage.vue') },
+  { path: '/offer/:id', component: () => import('@/views/OfferPage.vue'), meta: { requiresAuth: true } },
+  { path: '/offer/:id/accepted', component: () => import('@/views/OfferAcceptedPage.vue'), meta: { requiresAuth: true } },
+  { path: '/chat/:id', component: () => import('@/views/ChatPage.vue'), meta: { requiresAuth: true } },
+  { path: '/checkout', component: () => import('@/views/CheckoutPage.vue'), meta: { requiresAuth: true } },
+  { path: '/shipping-address', component: () => import('@/views/ShippingAddressPage.vue'), meta: { requiresAuth: true } },
+  { path: '/choose-shipping', component: () => import('@/views/ChooseShippingPage.vue'), meta: { requiresAuth: true } },
+  { path: '/payment-methods', component: () => import('@/views/PaymentMethodsPage.vue'), meta: { requiresAuth: true } },
+  { path: '/review-summary', component: () => import('@/views/ReviewSummaryPage.vue'), meta: { requiresAuth: true } },
+  { path: '/order-success', component: () => import('@/views/OrderSuccessPage.vue'), meta: { requiresAuth: true } },
+  { path: '/orders/:id', component: () => import('@/views/OrderTrackPage.vue'), meta: { requiresAuth: true } },
+  { path: '/admin', component: () => import('@/views/AdminDashboardPage.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
 ];
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
+});
+
+router.beforeEach(async (to) => {
+  const auth = useAuthStore();
+  await auth.init();
+
+  if (to.meta.requiresAuth && !auth.isAuthenticated) {
+    return { path: '/signin', query: { redirect: to.fullPath } };
+  }
+
+  if (to.meta.requiresAdmin && !auth.isAdmin) {
+    return '/tabs/home';
+  }
+
+  if ((to.path === '/signin' || to.path === '/signup') && auth.isAuthenticated) {
+    return '/tabs/home';
+  }
+
+  return true;
 });
 
 export default router;
