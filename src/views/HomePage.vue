@@ -152,8 +152,7 @@ async function loadListings() {
   loading.value = true;
   errorMessage.value = '';
   try {
-    const response = await listingService.list({ size: 20, sort: 'createdAt,desc' });
-    listings.value = Array.isArray(response) ? response : response.content;
+    listings.value = await listingService.listAllPublic();
   } catch (error: any) {
     errorMessage.value = error?.message || 'No se pudieron cargar los anuncios.';
   } finally {
