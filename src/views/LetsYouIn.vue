@@ -64,11 +64,11 @@ import googleLogo from '@/assets/logos/google.png';
 const router = useRouter();
 
 function goToSignIn() {
-  router.push('/signin');
+  router.push({ path: '/signin', query: { force: 'true' } });
 }
 
 function goToSignUp() {
-  router.push('/signup');
+  router.push({ path: '/signup', query: { force: 'true' } });
 }
 
 function loginWithFacebook() {
