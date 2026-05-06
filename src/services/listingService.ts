@@ -137,7 +137,7 @@ export const listingService = {
 
   uploadImage(listingId: string | number, file: File, token: string) {
     const data = new FormData();
-    data.append('image', file);
+    data.append('file', file);
     return apiClient.post<ListingImageResponse>(`/api/cars/${listingId}/images`, data, { token });
   },
 
