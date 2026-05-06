@@ -96,6 +96,10 @@ export const listingService = {
     return apiClient.get<ListingPageResponse | ListingResponse[]>(`/api/cars${buildQuery(params)}`);
   },
 
+  listAllPublic() {
+    return apiClient.get<ListingResponse[]>('/api/cars/all');
+  },
+
   getById(id: string | number) {
     return apiClient.get<ListingResponse>(`/api/cars/${id}`);
   },
