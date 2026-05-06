@@ -14,12 +14,12 @@
           <img :src="autovalorLogo" alt="AutoValor logo" class="signin-logo" />
         </div>
 
-        <h1 class="signin-title">Login to Your Account</h1>
+        <h1 class="signin-title">Inicia sesión</h1>
 
         <div class="form-block">
           <div class="input-box">
             <ion-icon :icon="mail" class="input-icon" />
-            <ion-input v-model="email" type="email" placeholder="Email" />
+            <ion-input v-model="email" type="email" placeholder="Email" autocomplete="email" />
           </div>
 
           <div class="input-box">
@@ -27,7 +27,9 @@
             <ion-input
               v-model="password"
               :type="showPassword ? 'text' : 'password'"
-              placeholder="Password"
+              placeholder="Contraseña"
+              autocomplete="current-password"
+              @keyup.enter="handleLogin"
             />
             <button type="button" class="eye-btn" @click="showPassword = !showPassword" aria-label="Toggle password visibility">
               <ion-icon :icon="showPassword ? eyeOff : eye" class="eye-icon" />
@@ -36,17 +38,22 @@
 
           <label class="remember-row">
             <input v-model="rememberMe" type="checkbox" class="remember-checkbox" />
-            <span>Remember me</span>
+            <span>Recordarme</span>
           </label>
 
-          <ion-button expand="block" class="signin-btn" @click="goToHome">Sign in</ion-button>
+          <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
 
-          <button type="button" class="forgot-btn" @click="goToForgotPassword">Forgot the password?</button>
+          <ion-button expand="block" class="signin-btn" :disabled="auth.loading" @click="handleLogin">
+            <ion-spinner v-if="auth.loading" name="crescent" />
+            <span v-else>Entrar</span>
+          </ion-button>
+
+          <button type="button" class="forgot-btn" @click="goToForgotPassword">¿Has olvidado la contraseña?</button>
         </div>
 
         <div class="divider-row">
           <div class="divider-line"></div>
-          <div class="divider-text">or continue with</div>
+          <div class="divider-text">o continúa con</div>
           <div class="divider-line"></div>
         </div>
 
@@ -63,8 +70,8 @@
         </div>
 
         <div class="signup-row">
-          Don't have an account?
-          <span class="signup-link" @click="goToSignUp">Sign up</span>
+          ¿No tienes cuenta?
+          <span class="signup-link" @click="goToSignUp">Regístrate</span>
         </div>
       </div>
     </ion-content>
@@ -81,26 +88,48 @@ import {
   IonIcon,
   IonInput,
   IonPage,
+  IonSpinner,
   IonToolbar,
 } from '@ionic/vue';
 import { eye, eyeOff, lockClosed, mail } from 'ionicons/icons';
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 import appleLogo from '@/assets/logos/apple.png';
 import autovalorLogo from '@/assets/logos/autovalor_logo.png';
 import facebookLogo from '@/assets/logos/facebook.png';
 import googleLogo from '@/assets/logos/google.png';
+import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();
+const route = useRoute();
+const auth = useAuthStore();
 
 const email = ref('');
 const password = ref('');
 const rememberMe = ref(false);
 const showPassword = ref(false);
+const errorMessage = ref('');
 
-function goToHome() {
-  router.replace('/tabs/home');
+async function handleLogin() {
+  errorMessage.value = '';
+
+  if (!email.value.trim() || !password.value) {
+    errorMessage.value = 'Introduce email y contraseña.';
+    return;
+  }
+
+  try {
+    await auth.login({
+      email: email.value.trim().toLowerCase(),
+      password: password.value,
+    });
+
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/tabs/home';
+    router.replace(redirect);
+  } catch (error: any) {
+    errorMessage.value = error?.message || auth.error || 'No se pudo iniciar sesión.';
+  }
 }
 
 function goToForgotPassword() {
@@ -112,15 +141,15 @@ function goToSignUp() {
 }
 
 function loginWithFacebook() {
-  console.log('facebook login');
+  errorMessage.value = 'Login social pendiente de integración.';
 }
 
 function loginWithGoogle() {
-  console.log('google login');
+  errorMessage.value = 'Login social pendiente de integración.';
 }
 
 function loginWithApple() {
-  console.log('apple login');
+  errorMessage.value = 'Login social pendiente de integración.';
 }
 </script>
 
@@ -255,6 +284,14 @@ function loginWithApple() {
   border: solid #1f222a;
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
+}
+
+.error-message {
+  margin: -2px 0 14px;
+  color: #d92d20;
+  font-size: 14px;
+  line-height: 1.35;
+  text-align: center;
 }
 
 .signin-btn {
