@@ -10,7 +10,7 @@
 
     <ion-content class="signup-content">
       <div class="signup-container">
-        <h1 class="signup-title">Fill Your Profile</h1>
+        <h1 class="signup-title">Crear cuenta</h1>
 
         <div class="avatar-wrap">
           <div class="avatar-circle">
@@ -23,64 +23,53 @@
 
         <div class="form-block">
           <div class="input-box">
-            <ion-input v-model="fullName" placeholder="Full Name" />
-          </div>
-
-          <div class="input-box">
-            <ion-icon :icon="personOutline" class="input-icon" />
-            <ion-input v-model="username" placeholder="Username" />
-          </div>
-
-          <div class="input-box">
-            <ion-input :value="birthDate" placeholder="01/01/2001" readonly @click="openBirthDatePicker" />
-            <button type="button" class="calendar-trigger" aria-label="Choose birth date" @click="openBirthDatePicker">
-              <ion-icon :icon="calendarOutline" class="input-icon" />
-            </button>
+            <ion-input v-model="fullName" placeholder="Nombre completo" autocomplete="name" />
           </div>
 
           <div class="input-box">
             <ion-icon :icon="mail" class="input-icon" />
-            <ion-input v-model="email" type="email" placeholder="Email" />
-          </div>
-
-          <div class="input-box phone-box">
-            <div class="country-tag">
-              <span>ES</span>
-              <ion-icon :icon="chevronDown" />
-            </div>
-            <ion-input v-model="phone" placeholder="+1 000 000 000" />
+            <ion-input v-model="email" type="email" placeholder="Email" autocomplete="email" />
           </div>
 
           <div class="input-box">
-            <ion-input v-model="gender" placeholder="Gender" />
-            <ion-icon :icon="chevronDown" class="input-icon" />
+            <ion-icon :icon="lockClosed" class="input-icon" />
+            <ion-input
+              v-model="password"
+              :type="showPassword ? 'text' : 'password'"
+              placeholder="Contraseña"
+              autocomplete="new-password"
+            />
+            <button type="button" class="calendar-trigger" aria-label="Mostrar contraseña" @click="showPassword = !showPassword">
+              <ion-icon :icon="showPassword ? eyeOff : eye" class="input-icon" />
+            </button>
+          </div>
+
+          <div class="input-box">
+            <ion-icon :icon="lockClosed" class="input-icon" />
+            <ion-input
+              v-model="confirmPassword"
+              :type="showPassword ? 'text' : 'password'"
+              placeholder="Confirmar contraseña"
+              autocomplete="new-password"
+              @keyup.enter="handleRegister"
+            />
           </div>
         </div>
 
-        <ion-button expand="block" class="continue-btn" @click="goToNextStep">Continue</ion-button>
-      </div>
-    </ion-content>
+        <p class="helper-text">Después podrás completar tu perfil desde la pantalla de usuario.</p>
+        <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
 
-    <ion-popover
-      :is-open="isBirthDateModalOpen"
-      class="birthdate-popover"
-      @didDismiss="closeBirthDatePicker"
-    >
-      <div class="birthdate-popover-body">
-        <h3 class="birthdate-popover-title">Select your birth date</h3>
-        <DatePicker
-          v-model="draftBirthDateValue"
-          inline
-          :max-date="new Date()"
-          date-format="dd/mm/yy"
-          class="birthdate-prime-calendar"
-        />
-        <div class="birthdate-popover-actions">
-          <ion-button fill="clear" size="small" @click="closeBirthDatePicker">Cancel</ion-button>
-          <ion-button fill="solid" size="small" @click="confirmBirthDate">Done</ion-button>
+        <ion-button expand="block" class="continue-btn" :disabled="auth.loading" @click="handleRegister">
+          <ion-spinner v-if="auth.loading" name="crescent" />
+          <span v-else>Crear cuenta</span>
+        </ion-button>
+
+        <div class="signin-row">
+          ¿Ya tienes cuenta?
+          <span class="signin-link" @click="goToSignIn">Inicia sesión</span>
         </div>
       </div>
-    </ion-popover>
+    </ion-content>
   </ion-page>
 </template>
 
@@ -94,51 +83,59 @@ import {
   IonIcon,
   IonInput,
   IonPage,
-  IonPopover,
+  IonSpinner,
   IonToolbar,
 } from '@ionic/vue';
-import DatePicker from 'primevue/datepicker';
-import { calendarOutline, chevronDown, create, mail, person, personOutline } from 'ionicons/icons';
+import { create, eye, eyeOff, lockClosed, mail, person } from 'ionicons/icons';
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();
+const route = useRoute();
+const auth = useAuthStore();
 
 const fullName = ref('');
-const username = ref('');
-const birthDate = ref('');
-const birthDateISO = ref('');
-const birthDateValue = ref<Date | null>(null);
-const draftBirthDateValue = ref<Date | null>(null);
-const isBirthDateModalOpen = ref(false);
 const email = ref('');
-const phone = ref('');
-const gender = ref('');
+const password = ref('');
+const confirmPassword = ref('');
+const showPassword = ref(false);
+const errorMessage = ref('');
 
-function openBirthDatePicker() {
-  draftBirthDateValue.value = birthDateValue.value ? new Date(birthDateValue.value) : new Date();
-  isBirthDateModalOpen.value = true;
+async function handleRegister() {
+  errorMessage.value = '';
+
+  if (!fullName.value.trim() || !email.value.trim() || !password.value) {
+    errorMessage.value = 'Completa nombre, email y contraseña.';
+    return;
+  }
+
+  if (password.value.length < 8) {
+    errorMessage.value = 'La contraseña debe tener al menos 8 caracteres.';
+    return;
+  }
+
+  if (password.value !== confirmPassword.value) {
+    errorMessage.value = 'Las contraseñas no coinciden.';
+    return;
+  }
+
+  try {
+    await auth.register({
+      name: fullName.value.trim(),
+      email: email.value.trim().toLowerCase(),
+      password: password.value,
+    });
+
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/tabs/home';
+    router.replace(redirect);
+  } catch (error: any) {
+    errorMessage.value = error?.message || auth.error || 'No se pudo crear la cuenta.';
+  }
 }
 
-function closeBirthDatePicker() {
-  isBirthDateModalOpen.value = false;
-}
-
-function confirmBirthDate() {
-  const selected = draftBirthDateValue.value;
-  if (!selected) return;
-
-  birthDateValue.value = selected;
-  const year = selected.getFullYear();
-  const month = String(selected.getMonth() + 1).padStart(2, '0');
-  const day = String(selected.getDate()).padStart(2, '0');
-  birthDateISO.value = `${year}-${month}-${day}`;
-  birthDate.value = `${day}/${month}/${year}`;
-  closeBirthDatePicker();
-}
-
-function goToNextStep() {
-  router.push('/createnewpassword');
+function goToSignIn() {
+  router.push('/signin');
 }
 </script>
 
@@ -266,47 +263,18 @@ ion-back-button {
   justify-content: center;
 }
 
-:global(.birthdate-popover::part(content)) {
-  width: min(332px, calc(100vw - 24px));
-  border-radius: 16px;
-}
-
-.birthdate-popover-body {
-  padding: 14px;
-}
-
-.birthdate-popover-title {
-  margin: 0 0 10px;
-  font-size: 16px;
-  font-weight: 700;
-  color: #1f222a;
-}
-
-:global(.birthdate-prime-calendar .p-datepicker) {
-  border: 0;
-}
-
-.birthdate-popover-actions {
-  margin-top: 8px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 4px;
-}
-
-.phone-box {
-  gap: 12px;
-}
-
-.country-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.helper-text {
+  margin: 16px 0 0;
   color: #7d8088;
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
-.country-tag ion-icon {
-  font-size: 13px;
+.error-message {
+  margin: 12px 0 0;
+  color: #d92d20;
+  font-size: 14px;
+  line-height: 1.35;
 }
 
 .continue-btn {
@@ -320,5 +288,19 @@ ion-back-button {
   font-size: 17px;
   font-weight: 600;
   letter-spacing: 0;
+}
+
+.signin-row {
+  margin-top: 22px;
+  text-align: center;
+  color: #b0b3b9;
+  font-size: 14px;
+}
+
+.signin-link {
+  margin-left: 8px;
+  color: #1b1d23;
+  font-weight: 700;
+  cursor: pointer;
 }
 </style>
