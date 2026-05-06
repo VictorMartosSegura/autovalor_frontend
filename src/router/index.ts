@@ -58,7 +58,10 @@ router.beforeEach(async (to) => {
     return '/tabs/home';
   }
 
-  if ((to.path === '/signin' || to.path === '/signup') && auth.isAuthenticated) {
+  const isAuthScreen = to.path === '/signin' || to.path === '/signup';
+  const forceAuthScreen = to.query.force === 'true';
+
+  if (isAuthScreen && auth.isAuthenticated && !forceAuthScreen) {
     return '/tabs/home';
   }
 
