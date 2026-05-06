@@ -5,6 +5,17 @@ import { authService, type AuthResponse, type LoginRequest, type RegisterRequest
 const TOKEN_KEY = 'autovalor_auth_token';
 const USER_KEY = 'autovalor_auth_user';
 
+function toPlainUser(user: UserResponse | null) {
+  if (!user) return null;
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    createdAt: user.createdAt,
+  };
+}
+
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     token: null as string | null,
@@ -27,7 +38,9 @@ export const useAuthStore = defineStore('auth', {
       const storage = new Storage();
       this._storage = await storage.create();
       this.token = await this._storage.get(TOKEN_KEY);
-      this.user = await this._storage.get(USER_KEY);
+
+      const storedUser = await this._storage.get(USER_KEY);
+      this.user = storedUser ? JSON.parse(storedUser) : null;
       this.ready = true;
 
       if (this.token) {
@@ -93,7 +106,7 @@ export const useAuthStore = defineStore('auth', {
     async persist() {
       await this.ensureStorage();
       await this._storage!.set(TOKEN_KEY, this.token);
-      await this._storage!.set(USER_KEY, this.user);
+      await this._storage!.set(USER_KEY, JSON.stringify(toPlainUser(this.user)));
     },
 
     async logout() {
