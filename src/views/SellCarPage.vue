@@ -15,15 +15,15 @@
       <section class="step-card">
         <div class="step-header">
           <h3>1. Fotos del vehículo</h3>
-          <span>{{ selectedFiles.length }}/8</span>
+          <span>{{ selectedFiles.length }}/{{ maxImages }}</span>
         </div>
-        <p class="muted">Recomendado: exterior, interior, frontal, trasera, lateral, salpicadero, kilómetros y motor.</p>
+        <p class="muted">Recomendado: exterior, interior, frontal, trasera, lateral y salpicadero/kilómetros.</p>
 
         <label class="upload-box">
           <input type="file" accept="image/*" multiple @change="handleFiles" />
           <ion-icon :icon="cloudUploadOutline" />
           <strong>Seleccionar fotos</strong>
-          <small>Máximo 8 imágenes</small>
+          <small>Máximo {{ maxImages }} imágenes</small>
         </label>
 
         <div v-if="previews.length" class="preview-grid">
@@ -126,6 +126,7 @@ import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();
 const auth = useAuthStore();
+const maxImages = 6;
 
 const selectedFiles = ref<File[]>([]);
 const previews = ref<{ file: File; url: string }[]>([]);
@@ -178,7 +179,11 @@ function handleFiles(event: Event) {
   errorMessage.value = '';
   const input = event.target as HTMLInputElement;
   const files = Array.from(input.files || []).filter((file) => file.type.startsWith('image/'));
-  const merged = [...selectedFiles.value, ...files].slice(0, 8);
+  const merged = [...selectedFiles.value, ...files].slice(0, maxImages);
+
+  if (selectedFiles.value.length + files.length > maxImages) {
+    errorMessage.value = `Solo puedes subir un máximo de ${maxImages} fotos.`;
+  }
 
   previews.value.forEach((preview) => URL.revokeObjectURL(preview.url));
   selectedFiles.value = merged;
@@ -359,7 +364,7 @@ function cleanPayload(payload: CreateListingRequest): CreateListingRequest {
 .preview-grid {
   margin-top: 14px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
 
