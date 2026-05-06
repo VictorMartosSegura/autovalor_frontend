@@ -16,127 +16,124 @@
       <ion-toolbar class="search-wrap">
         <div class="search-bar" role="button" tabindex="0" @click="goToSearch" @keydown.enter="goToSearch">
           <ion-icon :icon="searchOutline" />
-          <span class="search-label">{{ query || 'Search' }}</span>
+          <span class="search-label">{{ query || 'Buscar coche' }}</span>
           <button class="filter-btn" type="button" @click.stop><ion-icon :icon="optionsOutline" /></button>
         </div>
       </ion-toolbar>
     </ion-header>
 
     <ion-content class="home-content mobile-safe-content">
-      <section>
-        <div class="section-header">
-          <span class="section-title">Last View</span>
-        </div>
-        <div class="last-view-row">
-          <div v-for="car in lastViewed" :key="car.id" class="product-card last-view-card" @click="goToCar(car.id)">
-            <div class="card-image">
-              <img :src="car.image" :alt="car.name" />
-              <button class="card-heart" @click.stop="wishlist.toggle(car.id)"><ion-icon :icon="wishlist.isInWishlist(car.id) ? heart : heartOutline" /></button>
-            </div>
-            <div class="card-info">
-              <div class="card-name">{{ car.name }}</div>
-              <div class="card-meta">
-                <span class="card-rating"><ion-icon :icon="star" /> {{ car.rating }}</span>
-                <span class="card-badge">{{ car.tag }}</span>
+      <ion-refresher slot="fixed" @ionRefresh="refreshListings">
+        <ion-refresher-content />
+      </ion-refresher>
+
+      <div v-if="loading" class="state-block">
+        <ion-spinner name="crescent" />
+        <p>Cargando anuncios...</p>
+      </div>
+
+      <div v-else-if="errorMessage" class="state-block">
+        <p>{{ errorMessage }}</p>
+        <ion-button size="small" @click="loadListings">Reintentar</ion-button>
+      </div>
+
+      <div v-else>
+        <section v-if="lastViewed.length">
+          <div class="section-header">
+            <span class="section-title">Últimos anuncios</span>
+          </div>
+          <div class="last-view-row">
+            <div v-for="car in lastViewed" :key="car.id" class="product-card last-view-card" @click="goToCar(car.id)">
+              <div class="card-image">
+                <img :src="car.image" :alt="car.name" />
+                <button class="card-heart" @click.stop="wishlist.toggle(String(car.id))"><ion-icon :icon="wishlist.isInWishlist(String(car.id)) ? heart : heartOutline" /></button>
               </div>
-              <div class="card-price">${{ formatPrice(car.price) }}</div>
+              <div class="card-info">
+                <div class="card-name">{{ car.name }}</div>
+                <div class="card-meta">
+                  <span class="card-rating"><ion-icon :icon="star" /> {{ car.year || 'S/A' }}</span>
+                  <span class="card-badge">{{ car.tag }}</span>
+                </div>
+                <div class="card-price">{{ formatPrice(car.price) }} €</div>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section>
-        <div class="section-header">
-          <span class="section-title">Serch Brand</span>
-        </div>
-        <div class="brands-grid">
-          <button v-for="brand in brands" :key="brand.label" class="brand-item" @click="query = brand.query" type="button">
-            <div class="brand-icon">
-              <img :src="brand.iconImg" :alt="brand.label" />
-            </div>
-            <div class="brand-name">{{ brand.label }}</div>
-          </button>
-        </div>
-      </section>
-
-      <section>
-        <div class="section-header">
-          <span class="section-title">Top Deals</span>
-          <span class="see-all">See All</span>
-        </div>
-        <div class="cards-grid">
-          <div v-for="car in topDeals" :key="car.id" class="product-card" @click="goToCar(car.id)">
-            <div class="card-image">
-              <img :src="car.images[0]" :alt="car.brand" />
-              <button class="card-heart" @click.stop="wishlist.toggle(car.id)"><ion-icon :icon="wishlist.isInWishlist(car.id) ? heart : heartOutline" /></button>
-            </div>
-            <div class="card-info">
-              <div class="card-name">{{ car.brand }} {{ car.model }}</div>
-              <div class="card-meta">
-                <span class="card-rating"><ion-icon :icon="star" /> {{ car.rating }}</span>
-                <span class="card-badge">{{ car.type }}</span>
+        <section>
+          <div class="section-header">
+            <span class="section-title">Buscar marca</span>
+          </div>
+          <div class="brands-grid">
+            <button v-for="brand in brands" :key="brand.label" class="brand-item" @click="filterByBrand(brand.query)" type="button">
+              <div class="brand-icon">
+                <img :src="brand.iconImg" :alt="brand.label" />
               </div>
-              <div class="card-price">${{ formatPrice(car.price) }}</div>
+              <div class="brand-name">{{ brand.label }}</div>
+            </button>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-header">
+            <span class="section-title">Anuncios destacados</span>
+            <span class="see-all" @click="goToSearch">Ver todos</span>
+          </div>
+
+          <div v-if="topDeals.length" class="cards-grid">
+            <div v-for="car in topDeals" :key="car.id" class="product-card" @click="goToCar(car.id)">
+              <div class="card-image">
+                <img :src="car.image" :alt="car.name" />
+                <button class="card-heart" @click.stop="wishlist.toggle(String(car.id))"><ion-icon :icon="wishlist.isInWishlist(String(car.id)) ? heart : heartOutline" /></button>
+              </div>
+              <div class="card-info">
+                <div class="card-name">{{ car.name }}</div>
+                <div class="card-meta">
+                  <span class="card-rating"><ion-icon :icon="star" /> {{ car.year || 'S/A' }}</span>
+                  <span class="card-badge">{{ car.tag }}</span>
+                </div>
+                <div class="card-price">{{ formatPrice(car.price) }} €</div>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+
+          <div v-else class="empty-block">
+            <h3>No hay anuncios todavía</h3>
+            <p>Crea el primer anuncio desde la pestaña vender.</p>
+            <ion-button size="small" @click="router.push('/tabs/sell')">Crear anuncio</ion-button>
+          </div>
+        </section>
+      </div>
     </ion-content>
   </ion-page>
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonContent, IonButton, IonIcon } from '@ionic/vue';
+import { IonPage, IonHeader, IonToolbar, IonContent, IonButton, IonIcon, IonSpinner, IonRefresher, IonRefresherContent } from '@ionic/vue';
 import logo from '@/assets/logos/autovalor_logo.png';
 import { heart, heartOutline, notificationsOutline, optionsOutline, searchOutline, star } from 'ionicons/icons';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { CARS, type Car } from '@/data/cars';
+import { listingService, normalizeImageUrl, type ListingResponse } from '@/services/listingService';
 import { useWishlistStore } from '@/stores/wishlist';
 
 const router = useRouter();
 const wishlist = useWishlistStore();
 const query = ref('');
-const cars = ref<Car[]>(CARS);
+const listings = ref<ListingResponse[]>([]);
+const loading = ref(false);
+const errorMessage = ref('');
 
-onMounted(() => wishlist.init());
+const fallbackImage = new URL('../assets/logos/autovalor_logo.png', import.meta.url).href;
 
-const byId = (id: string) => cars.value.find((c) => c.id === id);
-const mclarenBlack = computed(() => byId('mclaren-black'));
-const lamborghini = computed(() => byId('lamborghini'));
-const ferrariRace = computed(() => byId('ferrari-race'));
-
-const lastViewed = computed(() => [
-  {
-    id: mclarenBlack.value?.id ?? 'mclaren-black',
-    image: mclarenBlack.value?.images[0] ?? '',
-    name: 'McLaren Black',
-    rating: mclarenBlack.value?.rating ?? 4.9,
-    tag: mclarenBlack.value?.condition ?? 'Used',
-    price: mclarenBlack.value?.price ?? 280000,
-  },
-  {
-    id: lamborghini.value?.id ?? 'lamborghini',
-    image: lamborghini.value?.images[0] ?? '',
-    name: 'Lamborghini',
-    rating: lamborghini.value?.rating ?? 5.0,
-    tag: lamborghini.value?.condition ?? 'New',
-    price: lamborghini.value?.price ?? 320000,
-  },
-  {
-    id: ferrariRace.value?.id ?? 'ferrari-race',
-    image: ferrariRace.value?.images[0] ?? '',
-    name: 'Ferrari Race',
-    rating: ferrariRace.value?.rating ?? 4.9,
-    tag: ferrariRace.value?.condition ?? 'Used',
-    price: ferrariRace.value?.price ?? 185000,
-  },
-]);
-
-const topDeals = computed(() => {
-  const ids = ['bmw-m5', 'ferrari-race', 'camaro', 'jaguar', 'mclaren-720', 'subaru-wrx'];
-  return ids.map((id) => byId(id)).filter(Boolean) as Car[];
+onMounted(async () => {
+  await wishlist.init();
+  await loadListings();
 });
+
+const cards = computed(() => listings.value.map(toCard));
+const lastViewed = computed(() => cards.value.slice(0, 5));
+const topDeals = computed(() => cards.value.slice(0, 8));
 
 const brandLogo = (name: string) => new URL(`../assets/logos/${name}`, import.meta.url).href;
 
@@ -148,10 +145,40 @@ const brands = [
   { label: 'Volvo', query: 'Volvo', iconImg: brandLogo('volvo.png') },
   { label: 'Bugatti', query: 'Bugatti', iconImg: brandLogo('bugatti.png') },
   { label: 'Honda', query: 'Honda', iconImg: brandLogo('honda.png') },
-  { label: 'More', query: '', iconImg: brandLogo('more.png') },
+  { label: 'Más', query: '', iconImg: brandLogo('more.png') },
 ];
 
-function goToCar(id: string) {
+async function loadListings() {
+  loading.value = true;
+  errorMessage.value = '';
+  try {
+    const response = await listingService.list({ size: 20, sort: 'createdAt,desc' });
+    listings.value = Array.isArray(response) ? response : response.content;
+  } catch (error: any) {
+    errorMessage.value = error?.message || 'No se pudieron cargar los anuncios.';
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function refreshListings(event: CustomEvent) {
+  await loadListings();
+  (event.target as HTMLIonRefresherElement).complete();
+}
+
+function toCard(listing: ListingResponse) {
+  const image = normalizeImageUrl(listing.images?.[0]?.url) || fallbackImage;
+  return {
+    id: listing.id,
+    image,
+    name: listing.title || `${listing.brand || ''} ${listing.model || ''}`.trim() || 'Vehículo',
+    year: listing.year,
+    tag: listing.status || listing.fuelType || 'Disponible',
+    price: listing.price || 0,
+  };
+}
+
+function goToCar(id: string | number) {
   router.push(`/car/${id}`);
 }
 function goToWishlist() {
@@ -160,8 +187,17 @@ function goToWishlist() {
 function goToSearch() {
   router.push({ path: '/search', query: { q: query.value } });
 }
+function filterByBrand(brand: string) {
+  if (!brand) {
+    query.value = '';
+    goToSearch();
+    return;
+  }
+  query.value = brand;
+  router.push({ path: '/search/results', query: { brand } });
+}
 function formatPrice(n: number) {
-  return n.toLocaleString('en-US');
+  return n.toLocaleString('es-ES');
 }
 </script>
 
@@ -230,6 +266,27 @@ function formatPrice(n: number) {
 
 .home-content { --background: #ffffff; }
 
+.state-block,
+.empty-block {
+  min-height: 240px;
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #636a73;
+  gap: 12px;
+}
+.empty-block h3 {
+  margin: 0;
+  color: #202127;
+}
+.empty-block p,
+.state-block p {
+  margin: 0;
+}
+
 .section-header { display: flex; align-items: center; justify-content: space-between; padding: 14px var(--app-page-gutter) 10px; }
 .section-title { font-size: 22px; font-weight: 700; color: #202127; }
 .see-all { font-size: 14px; font-weight: 600; color: #8e8e93; cursor: pointer; }
@@ -289,7 +346,6 @@ function formatPrice(n: number) {
 .brand-icon img { width: 26px; height: 26px; object-fit: contain; }
 .brand-name { font-size: 12px; font-weight: 600; color: #2b2d33; }
 
-/* Responsive for mobile */
 @media (max-width: 600px) {
   .section-title {
     font-size: 20px;
@@ -318,97 +374,6 @@ function formatPrice(n: number) {
   }
   .brands-grid {
     grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
-}
-
-@media (orientation: landscape) and (max-height: 500px) {
-  .home-navbar {
-    padding-top: 6px;
-  }
-
-  .logo {
-    width: 24px;
-    height: 24px;
-  }
-
-  .navbar-brand {
-    font-size: 16px;
-  }
-
-  .search-wrap {
-    padding-top: 6px;
-  }
-
-  .search-bar {
-    height: 38px;
-    border-radius: 10px;
-  }
-
-  .section-header {
-    padding-top: 8px;
-    padding-bottom: 6px;
-  }
-
-  .section-title {
-    font-size: 18px;
-  }
-
-  .last-view-card {
-    min-width: 32vw;
-    max-width: 32vw;
-  }
-
-  .last-view-row {
-    padding-left: calc(var(--app-page-gutter) + 14px);
-    scroll-padding-left: calc(var(--app-page-gutter) + 14px);
-  }
-
-  .cards-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  .card-image {
-    height: 94px;
-    padding: 8px;
-  }
-
-  .card-heart {
-    width: 26px;
-    height: 26px;
-    top: 7px;
-    right: 7px;
-  }
-
-  .card-info {
-    padding: 8px 10px 10px;
-  }
-
-  .card-name {
-    font-size: 14px;
-  }
-
-  .card-price {
-    font-size: 15px;
-  }
-
-  .brands-grid {
-    grid-template-columns: repeat(8, minmax(0, 1fr));
-    gap: 10px 8px;
-  }
-
-  .brand-icon {
-    width: 42px;
-    height: 42px;
-  }
-
-  .brand-icon img {
-    width: 20px;
-    height: 20px;
-  }
-
-  .brand-name {
-    font-size: 11px;
   }
 }
 </style>
