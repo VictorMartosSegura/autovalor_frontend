@@ -45,6 +45,33 @@ export type ListingImageResponse = {
   createdAt?: string;
 };
 
+export type CreateListingRequest = {
+  title: string;
+  description?: string;
+  price: number;
+  brand: string;
+  model: string;
+  year: number;
+  km: number;
+  fuelType?: string;
+  transmission?: string;
+  location?: string;
+  province?: string;
+  sellerType?: string;
+  bodyType?: string;
+  doors?: number | null;
+  powerCv?: number | null;
+  engineSize?: string;
+  environmentalLabel?: string;
+  warranty?: boolean | null;
+  color?: string;
+  registrationMonth?: number | null;
+  registrationYear?: number | null;
+  previousOwners?: number | null;
+  financeable?: boolean | null;
+  maintenanceBook?: boolean | null;
+};
+
 export type ListingPageResponse = {
   content: ListingResponse[];
   page: number;
@@ -102,6 +129,16 @@ export const listingService = {
 
   getById(id: string | number) {
     return apiClient.get<ListingResponse>(`/api/cars/${id}`);
+  },
+
+  create(payload: CreateListingRequest, token: string) {
+    return apiClient.post<ListingResponse>('/api/cars', payload, { token });
+  },
+
+  uploadImage(listingId: string | number, file: File, token: string) {
+    const data = new FormData();
+    data.append('image', file);
+    return apiClient.post<ListingImageResponse>(`/api/cars/${listingId}/images`, data, { token });
   },
 
   getImages(id: string | number) {
