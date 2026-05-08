@@ -7,7 +7,7 @@
             <img :src="logo" alt="AutoValor" class="logo" />
             <h1>My Profile</h1>
           </div>
-          <ion-button fill="clear" size="small" class="menu-btn">
+          <ion-button fill="clear" size="small" class="menu-btn" @click="refreshProfile">
             <ion-icon :icon="ellipsisHorizontal" />
           </ion-button>
         </div>
@@ -17,27 +17,29 @@
     <ion-content class="profile-content">
       <div class="wrap">
         <div class="avatar-wrap">
-          <img class="avatar" src="https://i.pravatar.cc/220?img=12" alt="Profile" />
+          <div class="avatar fallback-avatar">{{ initials }}</div>
           <button class="edit-avatar" @click="goEdit">
             <ion-icon :icon="create" />
           </button>
         </div>
 
-        <h2>Victor Martos</h2>
-        <p class="phone">+34 667 378 399</p>
+        <h2>{{ userName }}</h2>
+        <p class="phone">{{ userEmail }}</p>
+
+        <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
 
         <div class="menu-list">
           <button class="row" @click="goEdit"><ion-icon :icon="personOutline" /><span>Edit Profile</span><ion-icon :icon="chevronForward" /></button>
-          <button class="row"><ion-icon :icon="locationOutline" /><span>Address</span><ion-icon :icon="chevronForward" /></button>
-          <button class="row"><ion-icon :icon="notificationsOutline" /><span>Notification</span><ion-icon :icon="chevronForward" /></button>
-          <button class="row"><ion-icon :icon="cardOutline" /><span>Payment</span><ion-icon :icon="chevronForward" /></button>
-          <button class="row"><ion-icon :icon="shieldCheckmarkOutline" /><span>Security</span><ion-icon :icon="chevronForward" /></button>
-          <button class="row"><ion-icon :icon="languageOutline" /><span>Language</span><span class="value">English (US)</span><ion-icon :icon="chevronForward" /></button>
+          <button class="row" @click="comingSoon"><ion-icon :icon="locationOutline" /><span>Address</span><ion-icon :icon="chevronForward" /></button>
+          <button class="row" @click="comingSoon"><ion-icon :icon="notificationsOutline" /><span>Notification</span><ion-icon :icon="chevronForward" /></button>
+          <button class="row" @click="comingSoon"><ion-icon :icon="cardOutline" /><span>Payment</span><ion-icon :icon="chevronForward" /></button>
+          <button class="row" @click="comingSoon"><ion-icon :icon="shieldCheckmarkOutline" /><span>Security</span><ion-icon :icon="chevronForward" /></button>
+          <button class="row" @click="comingSoon"><ion-icon :icon="languageOutline" /><span>Language</span><span class="value">English (US)</span><ion-icon :icon="chevronForward" /></button>
           <div class="row static"><ion-icon :icon="moonOutline" /><span>Dark Mode</span><ion-toggle v-model="darkMode" @ionChange="toggleDark" /></div>
-          <button class="row"><ion-icon :icon="documentTextOutline" /><span>Privacy Policy</span><ion-icon :icon="chevronForward" /></button>
-          <button class="row"><ion-icon :icon="helpCircleOutline" /><span>Help Center</span><ion-icon :icon="chevronForward" /></button>
-          <button class="row"><ion-icon :icon="peopleOutline" /><span>Invite Friends</span><ion-icon :icon="chevronForward" /></button>
-          <button class="row logout"><ion-icon :icon="logOutOutline" /><span>Logout</span></button>
+          <button class="row" @click="comingSoon"><ion-icon :icon="documentTextOutline" /><span>Privacy Policy</span><ion-icon :icon="chevronForward" /></button>
+          <button class="row" @click="comingSoon"><ion-icon :icon="helpCircleOutline" /><span>Help Center</span><ion-icon :icon="chevronForward" /></button>
+          <button class="row" @click="comingSoon"><ion-icon :icon="peopleOutline" /><span>Invite Friends</span><ion-icon :icon="chevronForward" /></button>
+          <button class="row logout" :disabled="loggingOut" @click="logout"><ion-icon :icon="logOutOutline" /><span>{{ loggingOut ? 'Logging out...' : 'Logout' }}</span></button>
         </div>
       </div>
     </ion-content>
@@ -63,19 +65,42 @@ import {
   shieldCheckmarkOutline,
 } from 'ionicons/icons';
 import { Storage } from '@ionic/storage';
-import { ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import logo from '@/assets/logos/autovalor_logo.png';
+import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();
+const auth = useAuthStore();
 const darkMode = ref(false);
+const loggingOut = ref(false);
+const errorMessage = ref('');
 const storage = new Storage();
 
-(async () => {
+const userName = computed(() => auth.user?.name || 'AutoValor User');
+const userEmail = computed(() => auth.user?.email || 'No email available');
+const initials = computed(() => {
+  const parts = userName.value.trim().split(/\s+/).filter(Boolean);
+  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'AV';
+});
+
+onMounted(async () => {
+  await auth.init();
+  await refreshProfile();
+
   const s = await storage.create();
   darkMode.value = (await s.get('dark_mode')) || false;
   document.body.classList.toggle('dark', darkMode.value);
-})();
+});
+
+async function refreshProfile() {
+  errorMessage.value = '';
+  try {
+    await auth.refreshMe();
+  } catch (error: any) {
+    errorMessage.value = error?.message || 'Could not load your profile.';
+  }
+}
 
 async function toggleDark() {
   const s = await storage.create();
@@ -85,6 +110,20 @@ async function toggleDark() {
 
 function goEdit() {
   router.push('/profile/edit');
+}
+
+function comingSoon() {
+  errorMessage.value = 'This section is not connected yet.';
+}
+
+async function logout() {
+  loggingOut.value = true;
+  try {
+    await auth.logout();
+    router.replace('/signin?force=true');
+  } finally {
+    loggingOut.value = false;
+  }
 }
 </script>
 
@@ -152,6 +191,16 @@ h1 {
   object-fit: cover;
 }
 
+.fallback-avatar {
+  background: #f2f3f5;
+  color: #1f222a;
+  border: 1px solid #e7e8ec;
+  display: grid;
+  place-items: center;
+  font-size: 32px;
+  font-weight: 800;
+}
+
 .edit-avatar {
   position: absolute;
   right: -4px;
@@ -181,6 +230,13 @@ h2 {
   font-size: 13px;
 }
 
+.error-message {
+  margin: 0 0 12px;
+  color: #d92d20;
+  text-align: center;
+  font-size: 13px;
+}
+
 .menu-list {
   border-top: 1px solid #efeff1;
   padding-top: 4px;
@@ -199,6 +255,10 @@ h2 {
   font-weight: 500;
   padding: 0 0;
   text-align: left;
+}
+
+.row:disabled {
+  opacity: 0.6;
 }
 
 .row ion-icon:first-child {
