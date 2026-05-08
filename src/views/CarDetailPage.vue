@@ -94,7 +94,7 @@
                 <p class="seller-type">{{ car.sellerType || 'Private seller' }}</p>
               </div>
               <div class="seller-actions">
-                <ion-button fill="clear" size="small">
+                <ion-button fill="clear" size="small" @click="contactSeller">
                   <ion-icon :icon="chatbubbleOutline" />
                 </ion-button>
                 <ion-button fill="clear" size="small">
@@ -115,7 +115,10 @@
         <span class="price-label">Price</span>
         <div class="price">{{ formatPrice(car.price) }} €</div>
       </div>
-      <ion-button class="buy-btn" @click="goToOffer">Contact seller</ion-button>
+      <ion-button class="buy-btn" :disabled="contactLoading" @click="contactSeller">
+        <ion-spinner v-if="contactLoading" name="crescent" />
+        <span v-else>Contact seller</span>
+      </ion-button>
     </ion-footer>
 
     <ion-content v-else class="ion-padding detail-state"><p>Car not found</p></ion-content>
@@ -146,16 +149,20 @@ import 'swiper/swiper-bundle.css';
 
 import { callOutline, chatbubbleOutline, checkmarkCircle, heart, heartOutline } from 'ionicons/icons';
 import { useWishlistStore } from '@/stores/wishlist';
+import { useAuthStore } from '@/stores/auth';
+import { chatService } from '@/services/chatService';
 import { listingService, normalizeImageUrl, type ListingImageResponse, type ListingResponse } from '@/services/listingService';
 import autovalorLogo from '@/assets/logos/autovalor_logo.png';
 
 const route = useRoute();
 const router = useRouter();
 const wishlist = useWishlistStore();
+const auth = useAuthStore();
 
 const car = ref<ListingResponse | null>(null);
 const images = ref<ListingImageResponse[]>([]);
 const loading = ref(false);
+const contactLoading = ref(false);
 const errorMessage = ref('');
 const swiperRef = ref<any>(null);
 const swiperInstance = ref<any>(null);
@@ -209,6 +216,27 @@ async function loadCar() {
   }
 }
 
+async function contactSeller() {
+  await auth.init();
+
+  if (!auth.token) {
+    router.push({ path: '/signin', query: { redirect: route.fullPath } });
+    return;
+  }
+
+  if (!car.value) return;
+
+  contactLoading.value = true;
+  try {
+    const conversation = await chatService.startForListing(car.value.id, auth.token);
+    router.push(`/chat/${conversation.id}`);
+  } catch (error: any) {
+    errorMessage.value = error?.message || 'Could not start the conversation.';
+  } finally {
+    contactLoading.value = false;
+  }
+}
+
 function onSlideChange(swiper: any) {
   currentSlide.value = swiper.realIndex;
 }
@@ -251,10 +279,6 @@ function destroySellerMap() {
     sellerMap.remove();
     sellerMap = null;
   }
-}
-
-function goToOffer() {
-  router.push(`/offer/${route.params.id}`);
 }
 
 function toggleWish() {
