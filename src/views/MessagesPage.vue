@@ -8,7 +8,7 @@
             <h1>Message</h1>
           </div>
           <div class="actions">
-            <ion-button fill="clear" size="small"><ion-icon :icon="searchOutline" /></ion-button>
+            <ion-button fill="clear" size="small" @click="loadConversations"><ion-icon :icon="searchOutline" /></ion-button>
             <ion-button fill="clear" size="small"><ion-icon :icon="ellipsisHorizontal" /></ion-button>
           </div>
         </div>
@@ -19,55 +19,88 @@
       <div class="wrap">
         <div class="tabs-title">Chats</div>
 
-        <div class="chat-list">
-          <article v-for="chat in chats" :key="chat.id" class="chat-item" @click="openChat(chat.id)">
-            <ion-avatar><img :src="chat.avatar" :alt="chat.name" /></ion-avatar>
+        <div v-if="loading" class="state-block">
+          <ion-spinner name="crescent" />
+          <p>Loading conversations...</p>
+        </div>
+
+        <div v-else-if="errorMessage" class="state-block">
+          <p>{{ errorMessage }}</p>
+          <ion-button size="small" @click="loadConversations">Retry</ion-button>
+        </div>
+
+        <div v-else-if="!conversations.length" class="state-block">
+          <p>No conversations yet.</p>
+          <small>Contact a seller from a vehicle detail page.</small>
+        </div>
+
+        <div v-else class="chat-list">
+          <article v-for="chat in conversations" :key="chat.id" class="chat-item" @click="openChat(chat.id)">
+            <ion-avatar><img :src="logo" :alt="chat.otherUserName" /></ion-avatar>
             <div class="info">
-              <strong>{{ chat.name }}</strong>
-              <p>{{ chat.lastMessage }}</p>
+              <strong>{{ chat.otherUserName || 'Seller' }}</strong>
+              <p>{{ chat.lastMessage || chat.listingTitle || 'Conversation started' }}</p>
             </div>
             <div class="right">
-              <span v-if="chat.unread" class="unread">{{ chat.unread }}</span>
-              <span class="time">{{ chat.time }}</span>
+              <span v-if="chat.unreadCount" class="unread">{{ chat.unreadCount }}</span>
+              <span class="time">{{ formatTime(chat.lastMessageAt || chat.updatedAt) }}</span>
             </div>
           </article>
         </div>
       </div>
-
-      <button class="fab" type="button" aria-label="New chat">
-        <ion-icon :icon="add" />
-      </button>
     </ion-content>
   </ion-page>
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonContent, IonAvatar, IonButton, IonIcon } from '@ionic/vue';
-import { add, ellipsisHorizontal, searchOutline } from 'ionicons/icons';
+import { IonPage, IonHeader, IonToolbar, IonContent, IonAvatar, IonButton, IonIcon, IonSpinner } from '@ionic/vue';
+import { ellipsisHorizontal, searchOutline } from 'ionicons/icons';
+import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import dayjs from 'dayjs';
 import logo from '@/assets/logos/autovalor_logo.png';
-import bmwStore from '@/assets/logos/bmwStore.png';
-import tesla from '@/assets/logos/tesla.png';
-import honda from '@/assets/logos/honda.png';
-import mercedes from '@/assets/logos/mercedes.png';
-import subaruStore from '@/assets/logos/subaruStore.png';
-import jaguarStore from '@/assets/logos/jaguarStore.png';
+import { chatService, type ConversationResponse } from '@/services/chatService';
+import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();
+const auth = useAuthStore();
+const conversations = ref<ConversationResponse[]>([]);
+const loading = ref(false);
+const errorMessage = ref('');
 
-const chats = [
-  { id: 'bmw-store', name: 'BMW Store', lastMessage: 'Hello, welcome to BMW ...', time: '09:41', unread: 2, avatar: bmwStore },
-  { id: 'tesla-motor', name: 'Tesla Motor', lastMessage: 'I just completed it.', time: '09:22', unread: 0, avatar: tesla },
-  { id: 'opel-store', name: 'Opel Store', lastMessage: 'Wow, this is really fast', time: 'Yesterday', unread: 2, avatar: mercedes },
-  { id: 'nissan-official', name: 'Nissan Official', lastMessage: 'omg. this is amazing', time: '09:16', unread: 3, avatar: honda },
-  { id: 'dongfeng-store', name: 'Dongfeng Store', lastMessage: 'just ideas for next time', time: 'Dec 20, 2024', unread: 0, avatar: subaruStore },
-  { id: 'mercedes-benz', name: 'Mercedes-Benz', lastMessage: "I'm really like driving!", time: 'Dec 20, 2024', unread: 3, avatar: mercedes },
-  { id: 'honda-motor', name: 'Honda Motor', lastMessage: 'perfect!', time: 'Dec 19, 2024', unread: 0, avatar: honda },
-  { id: 'volkswagen-official', name: 'Volkswagen Official', lastMessage: 'Thanks for your message.', time: 'Dec 18, 2024', unread: 0, avatar: jaguarStore },
-];
+onMounted(async () => {
+  await loadConversations();
+});
 
-function openChat(id: string) {
+async function loadConversations() {
+  await auth.init();
+  errorMessage.value = '';
+
+  if (!auth.token) {
+    router.push({ path: '/signin', query: { redirect: '/tabs/messages' } });
+    return;
+  }
+
+  loading.value = true;
+  try {
+    conversations.value = await chatService.listConversations(auth.token);
+  } catch (error: any) {
+    errorMessage.value = error?.message || 'Could not load conversations.';
+  } finally {
+    loading.value = false;
+  }
+}
+
+function openChat(id: string | number) {
   router.push(`/chat/${id}`);
+}
+
+function formatTime(value?: string | null) {
+  if (!value) return '';
+  const date = dayjs(value);
+  if (date.isSame(dayjs(), 'day')) return date.format('HH:mm');
+  if (date.isSame(dayjs().subtract(1, 'day'), 'day')) return 'Yesterday';
+  return date.format('DD MMM');
 }
 </script>
 
@@ -140,6 +173,26 @@ h1 {
   border-bottom: 3px solid #111216;
 }
 
+.state-block {
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 10px;
+  color: #6c7078;
+}
+
+.state-block p {
+  margin: 0;
+  font-size: 15px;
+}
+
+.state-block small {
+  color: #9a9ea6;
+}
+
 .chat-list {
   padding-top: 8px;
 }
@@ -156,10 +209,12 @@ ion-avatar {
   width: 46px;
   height: 46px;
   border: 1px solid #ececef;
+  background: #f6f6f7;
 }
 
 ion-avatar img {
-  object-fit: cover;
+  object-fit: contain;
+  padding: 8px;
 }
 
 .info {
@@ -208,25 +263,6 @@ ion-avatar img {
   color: #7a7f87;
   text-align: right;
   width: 100%;
-}
-
-.fab {
-  position: fixed;
-  right: 18px;
-  bottom: 88px;
-  width: 52px;
-  height: 52px;
-  border: 0;
-  border-radius: 50%;
-  background: #111216;
-  color: #fff;
-  display: grid;
-  place-items: center;
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
-}
-
-.fab ion-icon {
-  font-size: 24px;
 }
 
 @media (max-width: 360px) {
