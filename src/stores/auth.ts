@@ -91,6 +91,14 @@ export const useAuthStore = defineStore('auth', {
       return this.user;
     },
 
+    async updateProfile(payload: { name: string; email: string }) {
+      await this.init();
+      if (!this.token) throw new Error('No active session');
+      this.user = await authService.updateMe(payload, this.token);
+      await this.persist();
+      return this.user;
+    },
+
     async setSession(response: AuthResponse) {
       await this.ensureStorage();
       this.token = response.token;
