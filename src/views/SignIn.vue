@@ -14,7 +14,7 @@
           <img :src="autovalorLogo" alt="AutoValor logo" class="signin-logo" />
         </div>
 
-        <h1 class="signin-title">Inicia sesión</h1>
+        <h1 class="signin-title">Login to your Account</h1>
 
         <div class="form-block">
           <div class="input-box">
@@ -27,7 +27,7 @@
             <ion-input
               v-model="password"
               :type="showPassword ? 'text' : 'password'"
-              placeholder="Contraseña"
+              placeholder="Password"
               autocomplete="current-password"
               @keyup.enter="handleLogin"
             />
@@ -38,22 +38,22 @@
 
           <label class="remember-row">
             <input v-model="rememberMe" type="checkbox" class="remember-checkbox" />
-            <span>Recordarme</span>
+            <span>Remember me</span>
           </label>
 
           <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
 
           <ion-button expand="block" class="signin-btn" :disabled="auth.loading" @click="handleLogin">
             <ion-spinner v-if="auth.loading" name="crescent" />
-            <span v-else>Entrar</span>
+            <span v-else>Sign in</span>
           </ion-button>
 
-          <button type="button" class="forgot-btn" @click="goToForgotPassword">¿Has olvidado la contraseña?</button>
+          <button type="button" class="forgot-btn" @click="goToForgotPassword">Forgot the password?</button>
         </div>
 
         <div class="divider-row">
           <div class="divider-line"></div>
-          <div class="divider-text">o continúa con</div>
+          <div class="divider-text">or continue with</div>
           <div class="divider-line"></div>
         </div>
 
@@ -70,8 +70,8 @@
         </div>
 
         <div class="signup-row">
-          ¿No tienes cuenta?
-          <span class="signup-link" @click="goToSignUp">Regístrate</span>
+          Don’t have an account?
+          <span class="signup-link" @click="goToSignUp">Sign up</span>
         </div>
       </div>
     </ion-content>
@@ -115,7 +115,7 @@ async function handleLogin() {
   errorMessage.value = '';
 
   if (!email.value.trim() || !password.value) {
-    errorMessage.value = 'Introduce email y contraseña.';
+    errorMessage.value = 'Enter your email and password.';
     return;
   }
 
@@ -128,7 +128,7 @@ async function handleLogin() {
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/tabs/home';
     router.replace(redirect);
   } catch (error: any) {
-    errorMessage.value = error?.message || auth.error || 'No se pudo iniciar sesión.';
+    errorMessage.value = error?.message || auth.error || 'Could not sign in.';
   }
 }
 
@@ -141,15 +141,15 @@ function goToSignUp() {
 }
 
 function loginWithFacebook() {
-  errorMessage.value = 'Login social pendiente de integración.';
+  errorMessage.value = 'Social login is not connected yet.';
 }
 
 function loginWithGoogle() {
-  errorMessage.value = 'Login social pendiente de integración.';
+  errorMessage.value = 'Social login is not connected yet.';
 }
 
 function loginWithApple() {
-  errorMessage.value = 'Login social pendiente de integración.';
+  errorMessage.value = 'Social login is not connected yet.';
 }
 </script>
 
