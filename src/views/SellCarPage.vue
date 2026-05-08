@@ -8,7 +8,7 @@
           </button>
           <div>
             <h1>{{ step === 'photos' ? 'Sell your car' : 'Review listing' }}</h1>
-            <p>{{ step === 'photos' ? 'Upload photos and let AutoValor fill the listing.' : 'Check the details before publishing.' }}</p>
+            <p>{{ step === 'photos' ? 'Follow the photo guide so AutoValor can fill the listing.' : 'Check the details before publishing.' }}</p>
           </div>
         </div>
       </ion-toolbar>
@@ -21,50 +21,51 @@
             <ion-icon :icon="sparklesOutline" />
           </div>
           <h2>AI vehicle scan</h2>
-          <p>Add up to {{ maxImages }} photos. Use clear exterior and interior shots so the AI can suggest better data.</p>
+          <p>Upload the photos in the suggested order. AutoValor will use them to detect the vehicle and prepare the listing template.</p>
         </div>
 
         <div class="upload-card">
           <div class="section-heading">
             <div>
-              <h3>Vehicle photos</h3>
-              <p>{{ selectedFiles.length }}/{{ maxImages }} selected</p>
+              <h3>Photo guide</h3>
+              <p>{{ uploadedFiles.length }}/{{ maxImages }} selected</p>
             </div>
           </div>
 
-          <label class="upload-box">
-            <input type="file" accept="image/*" multiple @change="handleFiles" />
-            <ion-icon :icon="cameraOutline" />
-            <strong>Add photos</strong>
-            <small>Exterior, interior, dashboard, mileage...</small>
-          </label>
+          <div class="photo-slots-grid">
+            <label v-for="(slot, index) in photoSlots" :key="slot.key" class="photo-slot" :class="{ filled: Boolean(previews[index]) }">
+              <input type="file" accept="image/*" @change="handleSlotFile($event, index)" />
 
-          <div v-if="previews.length" class="preview-grid">
-            <div v-for="(preview, index) in previews" :key="preview.url" class="preview-item">
-              <img :src="preview.url" :alt="`Vehicle photo ${index + 1}`" />
-              <button type="button" @click="removeImage(index)">
+              <img v-if="previews[index]" :src="previews[index]?.url" :alt="slot.title" />
+
+              <div v-else class="slot-empty-state">
+                <ion-icon :icon="slot.icon" />
+                <strong>{{ slot.title }}</strong>
+                <small>{{ slot.description }}</small>
+              </div>
+
+              <button v-if="previews[index]" type="button" class="remove-photo-btn" @click.prevent="removeImage(index)">
                 <ion-icon :icon="close" />
               </button>
-            </div>
+            </label>
           </div>
         </div>
 
-        <div class="prompt-card">
-          <h3>Optional notes</h3>
-          <ion-textarea
-            v-model="prompt"
-            placeholder="Example: BMW 3 Series, 2018, diesel, manual. The mileage is visible in one photo."
-            auto-grow
-            class="text-area"
-          />
+        <div class="tips-card">
+          <h3>Tips for better AI results</h3>
+          <ul>
+            <li>Use clear photos with good light.</li>
+            <li>Include the dashboard if mileage is visible.</li>
+            <li>Add an engine or document photo only if it helps identify the vehicle.</li>
+          </ul>
         </div>
 
         <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
         <p v-if="aiMessage" class="success-message">{{ aiMessage }}</p>
 
-        <ion-button expand="block" class="primary-btn" :disabled="aiLoading || selectedFiles.length === 0" @click="generateSuggestion">
+        <ion-button expand="block" class="primary-btn" :disabled="aiLoading || uploadedFiles.length === 0" @click="generateSuggestion">
           <ion-spinner v-if="aiLoading" name="crescent" />
-          <span v-else>Analyze photos</span>
+          <span v-else>Analyze vehicle</span>
         </ion-button>
       </section>
 
@@ -78,9 +79,9 @@
             <span v-if="confidenceText" class="confidence-pill">AI {{ confidenceText }}</span>
           </div>
 
-          <div v-if="previews.length" class="mini-gallery">
-            <img v-for="preview in previews.slice(0, 3)" :key="preview.url" :src="preview.url" alt="Selected vehicle photo" />
-            <div v-if="previews.length > 3" class="more-photos">+{{ previews.length - 3 }}</div>
+          <div v-if="uploadedPreviews.length" class="mini-gallery">
+            <img v-for="preview in uploadedPreviews.slice(0, 3)" :key="preview.url" :src="preview.url" alt="Selected vehicle photo" />
+            <div v-if="uploadedPreviews.length > 3" class="more-photos">+{{ uploadedPreviews.length - 3 }}</div>
           </div>
         </div>
 
@@ -157,7 +158,15 @@ import {
   IonToggle,
   IonToolbar,
 } from '@ionic/vue';
-import { arrowBack, cameraOutline, close, sparklesOutline } from 'ionicons/icons';
+import {
+  arrowBack,
+  cameraOutline,
+  carSportOutline,
+  close,
+  documentTextOutline,
+  speedometerOutline,
+  sparklesOutline,
+} from 'ionicons/icons';
 import { computed, onBeforeUnmount, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { listingService, type CreateListingRequest } from '@/services/listingService';
@@ -168,10 +177,18 @@ const router = useRouter();
 const auth = useAuthStore();
 const maxImages = 6;
 
+const photoSlots = [
+  { key: 'front', title: 'Front', description: 'Main exterior photo', icon: carSportOutline },
+  { key: 'rear', title: 'Rear', description: 'Back of the vehicle', icon: carSportOutline },
+  { key: 'side', title: 'Side', description: 'Full side profile', icon: carSportOutline },
+  { key: 'interior', title: 'Interior', description: 'Seats and cabin', icon: cameraOutline },
+  { key: 'dashboard', title: 'Dashboard', description: 'Mileage if visible', icon: speedometerOutline },
+  { key: 'extra', title: 'Engine / Extra', description: 'Engine or documents', icon: documentTextOutline },
+];
+
 const step = ref<'photos' | 'review'>('photos');
-const selectedFiles = ref<File[]>([]);
-const previews = ref<{ file: File; url: string }[]>([]);
-const prompt = ref('');
+const selectedFiles = ref<Array<File | null>>(Array(maxImages).fill(null));
+const previews = ref<Array<{ file: File; url: string } | null>>(Array(maxImages).fill(null));
 const aiLoading = ref(false);
 const publishing = ref(false);
 const errorMessage = ref('');
@@ -207,42 +224,56 @@ const form = reactive<CreateListingRequest>({
   maintenanceBook: false,
 });
 
+const uploadedFiles = computed(() => selectedFiles.value.filter((file): file is File => Boolean(file)));
+const uploadedPreviews = computed(() => previews.value.filter((preview): preview is { file: File; url: string } => Boolean(preview)));
+
 const confidenceText = computed(() => {
   if (confidence.value === null || confidence.value === undefined) return '';
   return `${Math.round(confidence.value * 100)}%`;
 });
 
 onBeforeUnmount(() => {
-  previews.value.forEach((preview) => URL.revokeObjectURL(preview.url));
+  previews.value.forEach((preview) => {
+    if (preview) URL.revokeObjectURL(preview.url);
+  });
 });
 
-function handleFiles(event: Event) {
+function handleSlotFile(event: Event, index: number) {
   errorMessage.value = '';
   aiMessage.value = '';
   const input = event.target as HTMLInputElement;
-  const files = Array.from(input.files || []).filter((file) => file.type.startsWith('image/'));
-  const merged = [...selectedFiles.value, ...files].slice(0, maxImages);
+  const file = Array.from(input.files || []).find((candidate) => candidate.type.startsWith('image/'));
 
-  if (selectedFiles.value.length + files.length > maxImages) {
-    errorMessage.value = `You can upload up to ${maxImages} photos.`;
+  if (!file) {
+    input.value = '';
+    return;
   }
 
-  previews.value.forEach((preview) => URL.revokeObjectURL(preview.url));
-  selectedFiles.value = merged;
-  previews.value = merged.map((file) => ({ file, url: URL.createObjectURL(file) }));
+  if (previews.value[index]) {
+    URL.revokeObjectURL(previews.value[index]!.url);
+  }
+
+  selectedFiles.value[index] = file;
+  previews.value[index] = { file, url: URL.createObjectURL(file) };
   input.value = '';
 }
 
 function removeImage(index: number) {
-  URL.revokeObjectURL(previews.value[index].url);
-  selectedFiles.value.splice(index, 1);
-  previews.value.splice(index, 1);
+  if (previews.value[index]) {
+    URL.revokeObjectURL(previews.value[index]!.url);
+  }
+  selectedFiles.value[index] = null;
+  previews.value[index] = null;
 }
 
 function goBackToPhotos() {
   step.value = 'photos';
   errorMessage.value = '';
   successMessage.value = '';
+}
+
+function buildVehiclePrompt() {
+  return `AutoValor is creating a vehicle marketplace listing. The uploaded photos follow this order when present: 1 Front exterior, 2 Rear exterior, 3 Side profile, 4 Interior/cabin, 5 Dashboard or mileage, 6 Engine, documents or extra detail. Analyze only what is visible. The vehicle may be a car, motorbike, van or similar road vehicle. Fill the listing template with title, description and technical fields. Do not invent data. If a field is not visible or cannot be inferred safely, return null and add a warning.`;
 }
 
 async function generateSuggestion() {
@@ -256,18 +287,18 @@ async function generateSuggestion() {
     return;
   }
 
-  if (!selectedFiles.value.length) {
+  if (!uploadedFiles.value.length) {
     errorMessage.value = 'Upload at least one vehicle photo.';
     return;
   }
 
   aiLoading.value = true;
   try {
-    const suggestion = await vehicleAiService.suggest(prompt.value, selectedFiles.value, auth.token);
+    const suggestion = await vehicleAiService.suggest(buildVehiclePrompt(), uploadedFiles.value, auth.token);
     applySuggestion(suggestion);
     step.value = 'review';
   } catch (error: any) {
-    errorMessage.value = error?.message || 'Could not analyze the photos.';
+    errorMessage.value = error?.message || 'Could not analyze the vehicle.';
   } finally {
     aiLoading.value = false;
   }
@@ -325,7 +356,7 @@ async function publishListing() {
   try {
     const created = await listingService.create(cleanPayload(form), auth.token);
 
-    for (const file of selectedFiles.value) {
+    for (const file of uploadedFiles.value) {
       await listingService.uploadImage(created.id, file, auth.token);
     }
 
@@ -400,7 +431,7 @@ function cleanPayload(payload: CreateListingRequest): CreateListingRequest {
 
 .hero-card,
 .upload-card,
-.prompt-card,
+.tips-card,
 .review-card,
 .form-card,
 .warnings {
@@ -433,7 +464,7 @@ function cleanPayload(payload: CreateListingRequest): CreateListingRequest {
 .review-card h2,
 .form-card h3,
 .upload-card h3,
-.prompt-card h3 {
+.tips-card h3 {
   margin: 0;
   color: #1f222a;
   font-weight: 800;
@@ -445,7 +476,7 @@ function cleanPayload(payload: CreateListingRequest): CreateListingRequest {
 }
 
 .upload-card h3,
-.prompt-card h3,
+.tips-card h3,
 .form-card h3 {
   font-size: 18px;
 }
@@ -467,67 +498,73 @@ function cleanPayload(payload: CreateListingRequest): CreateListingRequest {
   margin-bottom: 14px;
 }
 
-.upload-box {
-  min-height: 136px;
-  border: 2px dashed #d6d8dd;
-  border-radius: 20px;
-  background: #ffffff;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  cursor: pointer;
-  text-align: center;
-  padding: 16px;
-}
-
-.upload-box input {
-  display: none;
-}
-
-.upload-box ion-icon {
-  font-size: 30px;
-  color: #1f222a;
-}
-
-.upload-box strong {
-  color: #1f222a;
-  font-size: 16px;
-}
-
-.upload-box small {
-  color: #8b8e96;
-}
-
-.preview-grid {
-  margin-top: 14px;
+.photo-slots-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
-.preview-item {
+.photo-slot {
   position: relative;
-  aspect-ratio: 1;
-  border-radius: 16px;
-  overflow: hidden;
+  min-height: 132px;
+  border: 2px dashed #d6d8dd;
+  border-radius: 18px;
   background: #ffffff;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.preview-item img,
-.mini-gallery img {
+.photo-slot.filled {
+  border-style: solid;
+  border-color: transparent;
+}
+
+.photo-slot input {
+  display: none;
+}
+
+.photo-slot > img {
   width: 100%;
   height: 100%;
+  min-height: 132px;
   object-fit: cover;
 }
 
-.preview-item button {
+.slot-empty-state {
+  padding: 12px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.slot-empty-state ion-icon {
+  font-size: 28px;
+  color: #1f222a;
+}
+
+.slot-empty-state strong {
+  color: #1f222a;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.slot-empty-state small {
+  color: #8b8e96;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.remove-photo-btn {
   position: absolute;
-  top: 5px;
-  right: 5px;
-  width: 25px;
-  height: 25px;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
   border: 0;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.68);
@@ -536,7 +573,14 @@ function cleanPayload(payload: CreateListingRequest): CreateListingRequest {
   place-items: center;
 }
 
-.text-area,
+.tips-card ul {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: #7d8088;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
 .description-area {
   margin-top: 12px;
   --background: #ffffff;
@@ -573,6 +617,12 @@ function cleanPayload(payload: CreateListingRequest): CreateListingRequest {
   border-radius: 14px;
   overflow: hidden;
   background: #ffffff;
+}
+
+.mini-gallery img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .more-photos {
