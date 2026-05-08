@@ -13,65 +13,126 @@
 
     <ion-content class="edit-content">
       <div class="wrap">
-        <div class="field"><ion-input v-model="fullName" /></div>
-        <div class="field"><ion-input v-model="username" /></div>
-        <div class="field"><ion-input v-model="birthDate" /></div>
+        <div class="avatar-preview">{{ initials }}</div>
+
+        <div class="field">
+          <ion-input v-model="fullName" label="Full name" label-placement="stacked" placeholder="Full name" />
+        </div>
 
         <div class="field icon-left">
           <ion-icon :icon="mail" />
-          <ion-input v-model="email" />
+          <ion-input v-model="email" type="email" label="Email" label-placement="stacked" placeholder="Email" />
         </div>
 
-        <div class="field icon-both">
-          <ion-icon :icon="lockClosed" />
-          <ion-input v-model="password" :type="showPassword ? 'text' : 'password'" />
-          <button class="eye" @click="showPassword = !showPassword">
-            <ion-icon :icon="showPassword ? eyeOff : eye" />
-          </button>
+        <div class="field muted-field">
+          <ion-input v-model="role" label="Role" label-placement="stacked" readonly />
         </div>
 
-        <div class="field phone-field">
-          <span class="flag">🇪🇸</span>
-          <ion-icon :icon="chevronDown" class="down small" />
-          <ion-input v-model="phone" />
+        <div class="field muted-field">
+          <ion-input v-model="createdAt" label="Member since" label-placement="stacked" readonly />
         </div>
 
-        <div class="field icon-both">
-          <ion-icon :icon="person" />
-          <ion-input v-model="gender" />
-          <ion-icon :icon="chevronDown" class="down" />
-        </div>
+        <p class="helper-text">For now AutoValor stores your name and email. More profile fields will be connected later.</p>
+        <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+        <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
       </div>
     </ion-content>
 
     <ion-footer class="ion-no-border footer">
-      <ion-button expand="block" class="primary" @click="save">Update</ion-button>
+      <ion-button expand="block" class="primary" :disabled="saving" @click="save">
+        <ion-spinner v-if="saving" name="crescent" />
+        <span v-else>Update</span>
+      </ion-button>
+      <ion-button expand="block" fill="clear" class="logout-btn" :disabled="loggingOut" @click="logout">
+        {{ loggingOut ? 'Logging out...' : 'Logout' }}
+      </ion-button>
     </ion-footer>
   </ion-page>
 </template>
 
 <script setup lang="ts">
-import { IonButton, IonContent, IonFooter, IonHeader, IonIcon, IonInput, IonPage, IonToolbar } from '@ionic/vue';
-import { arrowBack, chevronDown, eye, eyeOff, lockClosed, mail, person } from 'ionicons/icons';
-import { ref } from 'vue';
+import { IonButton, IonContent, IonFooter, IonHeader, IonIcon, IonInput, IonPage, IonSpinner, IonToolbar } from '@ionic/vue';
+import { arrowBack, mail } from 'ionicons/icons';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import dayjs from 'dayjs';
+import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();
-const fullName = ref('Victor Martos');
-const username = ref('VictorM');
-const birthDate = ref('12/01/2001');
-const email = ref('victormartos@gmail.com');
-const password = ref('123456789');
-const showPassword = ref(false);
-const phone = ref('+34 667 378 399');
-const gender = ref('Male');
+const auth = useAuthStore();
+
+const fullName = ref('');
+const email = ref('');
+const role = ref('');
+const createdAt = ref('');
+const saving = ref(false);
+const loggingOut = ref(false);
+const errorMessage = ref('');
+const successMessage = ref('');
+
+const initials = computed(() => {
+  const parts = fullName.value.trim().split(/\s+/).filter(Boolean);
+  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'AV';
+});
+
+onMounted(async () => {
+  await auth.init();
+  await loadProfile();
+});
+
+async function loadProfile() {
+  try {
+    const user = await auth.refreshMe();
+    fullName.value = user?.name || '';
+    email.value = user?.email || '';
+    role.value = user?.role || '';
+    createdAt.value = user?.createdAt ? dayjs(user.createdAt).format('DD MMM YYYY') : '—';
+  } catch (error: any) {
+    errorMessage.value = error?.message || 'Could not load your profile.';
+  }
+}
 
 function goBack() {
   router.back();
 }
 
-function save() {
-  router.replace('/tabs/profile');
+async function save() {
+  errorMessage.value = '';
+  successMessage.value = '';
+
+  if (!fullName.value.trim()) {
+    errorMessage.value = 'Full name is required.';
+    return;
+  }
+
+  if (!email.value.trim()) {
+    errorMessage.value = 'Email is required.';
+    return;
+  }
+
+  saving.value = true;
+  try {
+    await auth.updateProfile({
+      name: fullName.value.trim(),
+      email: email.value.trim().toLowerCase(),
+    });
+    successMessage.value = 'Profile updated.';
+    router.replace('/tabs/profile');
+  } catch (error: any) {
+    errorMessage.value = error?.message || 'Could not update your profile.';
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function logout() {
+  loggingOut.value = true;
+  try {
+    await auth.logout();
+    router.replace('/signin?force=true');
+  } finally {
+    loggingOut.value = false;
+  }
 }
 </script>
 
@@ -112,6 +173,20 @@ h1 {
   font-family: 'SF Pro Text', 'Segoe UI', Arial, sans-serif;
 }
 
+.avatar-preview {
+  width: 106px;
+  height: 106px;
+  border-radius: 50%;
+  background: #f2f3f5;
+  border: 1px solid #e7e8ec;
+  color: #1f222a;
+  margin: 8px auto 22px;
+  display: grid;
+  place-items: center;
+  font-size: 32px;
+  font-weight: 800;
+}
+
 .field {
   min-height: 56px;
   border: 1.4px solid #787c87;
@@ -128,39 +203,40 @@ h1 {
   font-size: 15px;
 }
 
-.icon-left ion-icon,
-.icon-both ion-icon,
-.phone-field ion-icon {
+.icon-left ion-icon {
   color: #1f222a;
   font-size: 16px;
 }
 
-.icon-both :deep(ion-input),
-.phone-field :deep(ion-input) {
+.icon-left :deep(ion-input) {
   flex: 1;
 }
 
-.eye {
-  margin-left: auto;
-  border: 0;
-  background: transparent;
-  display: grid;
-  place-items: center;
-  color: #1f222a;
+.muted-field {
+  background: #f6f6f7;
+  border-color: transparent;
 }
 
-.flag {
+.helper-text {
+  color: #7d8088;
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 4px 0 0;
+}
+
+.error-message,
+.success-message {
+  margin: 12px 0 0;
   font-size: 14px;
-  line-height: 1;
+  line-height: 1.35;
 }
 
-.down.small {
-  font-size: 12px;
-  margin-right: 2px;
+.error-message {
+  color: #d92d20;
 }
 
-.down {
-  margin-left: auto;
+.success-message {
+  color: #027a48;
 }
 
 .footer {
@@ -176,5 +252,31 @@ h1 {
   text-transform: none;
   font-weight: 600;
   font-size: 18px;
+}
+
+.logout-btn {
+  --color: #ff4d4f;
+  text-transform: none;
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+@media (max-width: 360px) {
+  h1 {
+    font-size: 32px;
+  }
+
+  .avatar-preview {
+    width: 96px;
+    height: 96px;
+  }
+}
+
+@media (min-width: 768px) {
+  .wrap,
+  .footer {
+    max-width: 760px;
+    margin: 0 auto;
+  }
 }
 </style>
