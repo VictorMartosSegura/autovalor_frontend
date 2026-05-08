@@ -30,6 +30,11 @@ export type RegisterRequest = {
   password: string;
 };
 
+export type UpdateProfileRequest = {
+  name: string;
+  email: string;
+};
+
 export const authService = {
   login(payload: LoginRequest) {
     return apiClient.post<AuthResponse>('/api/auth/login', payload);
@@ -41,5 +46,13 @@ export const authService = {
 
   me(token: string) {
     return apiClient.get<UserResponse>('/api/users/me', { token });
+  },
+
+  updateMe(payload: UpdateProfileRequest, token: string) {
+    return apiClient.put<UserResponse>('/api/users/me', payload, { token });
+  },
+
+  deleteMe(token: string) {
+    return apiClient.delete<void>('/api/users/me', { token });
   },
 };
