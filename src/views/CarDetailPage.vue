@@ -7,42 +7,50 @@
         </ion-buttons>
         <ion-buttons slot="end">
           <ion-button v-if="car" fill="clear" @click="toggleWish">
-            <ion-icon slot="icon-only" :icon="wishlist.isInWishlist(car.id) ? heart : heartOutline" />
+            <ion-icon slot="icon-only" :icon="wishlist.isInWishlist(String(car.id)) ? heart : heartOutline" />
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content v-if="car" class="detail-content">
+    <ion-content v-if="loading" class="ion-padding detail-state">
+      <ion-spinner name="crescent" />
+      <p>Loading car...</p>
+    </ion-content>
+
+    <ion-content v-else-if="errorMessage" class="ion-padding detail-state">
+      <p>{{ errorMessage }}</p>
+      <ion-button size="small" @click="loadCar">Retry</ion-button>
+    </ion-content>
+
+    <ion-content v-else-if="car" class="detail-content">
       <div class="hero">
         <Swiper ref="swiperRef" class="car-swiper" :loop="false" @swiper="onSwiperInit" @slideChange="onSlideChange">
-          <SwiperSlide v-for="(img, idx) in car.images" :key="idx">
+          <SwiperSlide v-for="(img, idx) in carImages" :key="idx">
             <img :src="img" class="car-img" :alt="`${car.brand} ${car.model}`" />
           </SwiperSlide>
         </Swiper>
-        <div class="pager">
-          <span v-for="idx in car.images.length" :key="idx" :class="{ active: currentSlide === idx - 1 }"></span>
+        <div v-if="carImages.length > 1" class="pager">
+          <span v-for="idx in carImages.length" :key="idx" :class="{ active: currentSlide === idx - 1 }"></span>
         </div>
       </div>
 
       <div class="content-section">
-        <h1 class="title">{{ car.brand }} {{ car.model }}</h1>
+        <h1 class="title">{{ car.title || `${car.brand} ${car.model}` }}</h1>
         <p class="listed">Listed on {{ listed }}</p>
         <div class="subtitle">
-          <span v-if="car.condition" class="condition-badge">{{ car.condition }}</span>
-          <span class="rating">
-            <ion-icon :icon="star" /> {{ car.rating }} (86 reviews)
-          </span>
+          <span v-if="car.status" class="condition-badge">{{ car.status }}</span>
+          <span v-if="car.year" class="detail-chip">{{ car.year }}</span>
+          <span v-if="car.km !== undefined && car.km !== null" class="detail-chip">{{ formatKm(car.km) }} km</span>
+          <span v-if="car.fuelType" class="detail-chip">{{ car.fuelType }}</span>
         </div>
 
         <div class="section">
           <h3>Description</h3>
-          <p class="description">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-          </p>
+          <p class="description">{{ car.description || 'No description provided.' }}</p>
         </div>
 
-        <div class="section">
+        <div v-if="gallery.length" class="section">
           <h3>Gallery Photos</h3>
           <div class="gallery">
             <button
@@ -58,16 +66,32 @@
           </div>
         </div>
 
+        <div class="section specs-section">
+          <h3>Vehicle details</h3>
+          <div class="specs-grid">
+            <div v-if="car.brand" class="spec-item"><span>Brand</span><strong>{{ car.brand }}</strong></div>
+            <div v-if="car.model" class="spec-item"><span>Model</span><strong>{{ car.model }}</strong></div>
+            <div v-if="car.transmission" class="spec-item"><span>Transmission</span><strong>{{ car.transmission }}</strong></div>
+            <div v-if="car.bodyType" class="spec-item"><span>Body</span><strong>{{ car.bodyType }}</strong></div>
+            <div v-if="car.color" class="spec-item"><span>Color</span><strong>{{ car.color }}</strong></div>
+            <div v-if="car.doors" class="spec-item"><span>Doors</span><strong>{{ car.doors }}</strong></div>
+            <div v-if="car.powerCv" class="spec-item"><span>Power</span><strong>{{ car.powerCv }} CV</strong></div>
+            <div v-if="car.engineSize" class="spec-item"><span>Engine</span><strong>{{ car.engineSize }}</strong></div>
+            <div v-if="car.environmentalLabel" class="spec-item"><span>Eco label</span><strong>{{ car.environmentalLabel }}</strong></div>
+            <div v-if="car.province || car.location" class="spec-item"><span>Location</span><strong>{{ [car.location, car.province].filter(Boolean).join(', ') }}</strong></div>
+          </div>
+        </div>
+
         <div class="section seller-section">
           <div class="seller-card">
             <div class="seller-info">
-              <img class="seller-logo" :src="sellerLogo" :alt="`${car.brand} logo`" />
+              <img class="seller-logo" :src="sellerLogo" alt="Seller logo" />
               <div class="seller-text">
                 <strong class="seller-name">
-                  {{ car.brand }} Store
-                  <ion-icon v-if="hasVerifiedBadge" class="verified-icon" :icon="checkmarkCircle" />
+                  {{ car.userName || car.sellerType || 'Seller' }}
+                  <ion-icon class="verified-icon" :icon="checkmarkCircle" />
                 </strong>
-                <p class="seller-type">Official Dealer</p>
+                <p class="seller-type">{{ car.sellerType || 'Private seller' }}</p>
               </div>
               <div class="seller-actions">
                 <ion-button fill="clear" size="small">
@@ -89,12 +113,12 @@
     <ion-footer v-if="car" class="ion-no-border footer">
       <div class="price-block">
         <span class="price-label">Price</span>
-        <div class="price">${{ formatPrice(car.price) }}</div>
+        <div class="price">{{ formatPrice(car.price) }} €</div>
       </div>
-      <ion-button class="buy-btn" @click="goToOffer">Buy the car</ion-button>
+      <ion-button class="buy-btn" @click="goToOffer">Contact seller</ion-button>
     </ion-footer>
 
-    <ion-content v-else class="ion-padding"><p>Car not found</p></ion-content>
+    <ion-content v-else class="ion-padding detail-state"><p>Car not found</p></ion-content>
   </ion-page>
 </template>
 
@@ -108,58 +132,71 @@ import {
   IonHeader,
   IonIcon,
   IonPage,
+  IonSpinner,
   IonToolbar,
 } from '@ionic/vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import dayjs from 'dayjs';
 import { useRoute, useRouter } from 'vue-router';
-import { CARS } from '@/data/cars';
 import maplibregl, { type Map as MapLibreMap } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 import { Swiper, SwiperSlide } from 'swiper/vue';
 import 'swiper/swiper-bundle.css';
 
-import { callOutline, chatbubbleOutline, checkmarkCircle, heart, heartOutline, star } from 'ionicons/icons';
+import { callOutline, chatbubbleOutline, checkmarkCircle, heart, heartOutline } from 'ionicons/icons';
 import { useWishlistStore } from '@/stores/wishlist';
-import bmwStoreLogo from '@/assets/logos/bmwStore.png';
-import camaroStoreLogo from '@/assets/logos/camaroStore.png';
-import ferrariStoreLogo from '@/assets/logos/ferrariStore.png';
-import jaguarStoreLogo from '@/assets/logos/jaguarStore.png';
-import lamborghiniStoreLogo from '@/assets/logos/lamborghiniStore.png';
-import mclarenStoreLogo from '@/assets/logos/mclarenStore.png';
-import subaruStoreLogo from '@/assets/logos/subaruStore.png';
+import { listingService, normalizeImageUrl, type ListingResponse } from '@/services/listingService';
+import autovalorLogo from '@/assets/logos/autovalor_logo.png';
 
 const route = useRoute();
 const router = useRouter();
 const wishlist = useWishlistStore();
-wishlist.init();
 
-const car = computed(() => CARS.find((c) => c.id === String(route.params.id)));
-const gallery = computed(() => (car.value ? car.value.images : []));
-const listed = computed(() => dayjs().format('DD MMM YYYY'));
-const sellerLogo = computed(() => {
-  if (!car.value) return bmwStoreLogo;
-
-  const logosByBrand: Record<string, string> = {
-    bmw: bmwStoreLogo,
-    ferrari: ferrariStoreLogo,
-    chevrolet: camaroStoreLogo,
-    jaguar: jaguarStoreLogo,
-    lamborghini: lamborghiniStoreLogo,
-    mclaren: mclarenStoreLogo,
-    subaru: subaruStoreLogo,
-  };
-
-  return logosByBrand[car.value.brand.toLowerCase()] ?? bmwStoreLogo;
-});
-const hasVerifiedBadge = computed(() => Boolean(car.value));
-
+const car = ref<ListingResponse | null>(null);
+const loading = ref(false);
+const errorMessage = ref('');
 const swiperRef = ref<any>(null);
 const swiperInstance = ref<any>(null);
 const currentSlide = ref(0);
 const mapEl = ref<HTMLElement | null>(null);
 let sellerMap: MapLibreMap | null = null;
+
+const fallbackImage = autovalorLogo;
+const sellerLogo = autovalorLogo;
+const listed = computed(() => car.value?.createdAt ? dayjs(car.value.createdAt).format('DD MMM YYYY') : dayjs().format('DD MMM YYYY'));
+const carImages = computed(() => {
+  const images = car.value?.images?.map((image) => normalizeImageUrl(image.url)).filter(Boolean) || [];
+  return images.length ? images : [fallbackImage];
+});
+const gallery = computed(() => carImages.value);
+
+onMounted(async () => {
+  await wishlist.init();
+  await loadCar();
+});
+
+onBeforeUnmount(() => {
+  destroySellerMap();
+});
+
+async function loadCar() {
+  loading.value = true;
+  errorMessage.value = '';
+  car.value = null;
+  currentSlide.value = 0;
+  destroySellerMap();
+
+  try {
+    car.value = await listingService.getById(String(route.params.id));
+    await nextTick();
+    initSellerMap();
+  } catch (error: any) {
+    errorMessage.value = error?.message || 'Car not found.';
+  } finally {
+    loading.value = false;
+  }
+}
 
 function onSlideChange(swiper: any) {
   currentSlide.value = swiper.realIndex;
@@ -176,44 +213,18 @@ function goToSlide(index: number) {
   currentSlide.value = index;
 }
 
-const sellerLocations: Record<string, [number, number]> = {
-  ferrari: [43.0761, 12.5673],
-  bmw: [48.1351, 11.582],
-  chevrolet: [42.3314, -83.0458],
-  mclaren: [51.5074, -0.1278],
-  bugatti: [47.6062, 7.2284],
-  jaguar: [52.4862, -1.8904],
-  subaru: [35.0116, 135.7681],
-  lamborghini: [45.5833, 11.3667],
-};
-
-onMounted(async () => {
-  await nextTick();
-  initSellerMap();
-});
-
-onBeforeUnmount(() => {
-  if (sellerMap) {
-    sellerMap.remove();
-    sellerMap = null;
-  }
-});
-
 function initSellerMap() {
   if (!mapEl.value || !car.value || sellerMap) return;
-
-  const brand = car.value.brand.toLowerCase();
-  const coords = sellerLocations[brand] || [40.4168, -3.7038];
 
   sellerMap = new maplibregl.Map({
     container: mapEl.value,
     style: 'https://demotiles.maplibre.org/style.json',
-    center: coords,
-    zoom: 10,
+    center: [-3.7038, 40.4168],
+    zoom: 5,
     attributionControl: {},
   });
 
-  new maplibregl.Marker({ color: '#356db7' }).setLngLat(coords).addTo(sellerMap);
+  new maplibregl.Marker({ color: '#356db7' }).setLngLat([-3.7038, 40.4168]).addTo(sellerMap);
 
   sellerMap.on('load', () => {
     sellerMap?.resize();
@@ -224,20 +235,39 @@ function initSellerMap() {
   }, 180);
 }
 
+function destroySellerMap() {
+  if (sellerMap) {
+    sellerMap.remove();
+    sellerMap = null;
+  }
+}
+
 function goToOffer() {
   router.push(`/offer/${route.params.id}`);
 }
 
 function toggleWish() {
-  if (car.value) wishlist.toggle(car.value.id);
+  if (car.value) wishlist.toggle(String(car.value.id));
 }
 
 function formatPrice(n: number) {
-  return n.toLocaleString('en-US');
+  return Number(n || 0).toLocaleString('es-ES');
+}
+
+function formatKm(n: number) {
+  return Number(n || 0).toLocaleString('es-ES');
 }
 </script>
 
 <style scoped>
+.detail-state {
+  --background: #ffffff;
+  color: #636a73;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .hero {
   background: #f6f6f7;
   margin: 20px 14px 0;
@@ -272,6 +302,7 @@ function formatPrice(n: number) {
 
 .detail-content {
   --padding-top: 6px;
+  --background: #ffffff;
 }
 
 .car-swiper {
@@ -326,31 +357,22 @@ function formatPrice(n: number) {
 
 .subtitle {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
   color: #6b7179;
   font-size: 13px;
   margin-bottom: 18px;
 }
 
-.condition-badge {
+.condition-badge,
+.detail-chip {
   background: #eff0f2;
   padding: 5px 11px;
   border-radius: 8px;
   color: #1a1a1a;
   font-size: 12px;
   font-weight: 700;
-}
-
-.rating {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.rating ion-icon {
-  color: #ff9500;
-  font-size: 14px;
 }
 
 .section {
@@ -397,11 +419,35 @@ function formatPrice(n: number) {
 .gallery-item img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
 }
 
 .gallery-item.active {
   border-color: #1f222a;
+}
+
+.specs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.spec-item {
+  background: #f6f6f7;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.spec-item span {
+  display: block;
+  color: #969aa2;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.spec-item strong {
+  color: #1a1a1a;
+  font-size: 13px;
 }
 
 .seller-card {
