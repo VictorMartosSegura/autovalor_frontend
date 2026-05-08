@@ -146,7 +146,7 @@ import 'swiper/swiper-bundle.css';
 
 import { callOutline, chatbubbleOutline, checkmarkCircle, heart, heartOutline } from 'ionicons/icons';
 import { useWishlistStore } from '@/stores/wishlist';
-import { listingService, normalizeImageUrl, type ListingResponse } from '@/services/listingService';
+import { listingService, normalizeImageUrl, type ListingImageResponse, type ListingResponse } from '@/services/listingService';
 import autovalorLogo from '@/assets/logos/autovalor_logo.png';
 
 const route = useRoute();
@@ -154,6 +154,7 @@ const router = useRouter();
 const wishlist = useWishlistStore();
 
 const car = ref<ListingResponse | null>(null);
+const images = ref<ListingImageResponse[]>([]);
 const loading = ref(false);
 const errorMessage = ref('');
 const swiperRef = ref<any>(null);
@@ -166,10 +167,12 @@ const fallbackImage = autovalorLogo;
 const sellerLogo = autovalorLogo;
 const listed = computed(() => car.value?.createdAt ? dayjs(car.value.createdAt).format('DD MMM YYYY') : dayjs().format('DD MMM YYYY'));
 const carImages = computed(() => {
-  const images = car.value?.images?.map((image) => normalizeImageUrl(image.url)).filter(Boolean) || [];
-  return images.length ? images : [fallbackImage];
+  const detailImages = car.value?.images || [];
+  const allImages = images.value.length ? images.value : detailImages;
+  const urls = allImages.map((image) => normalizeImageUrl(image.url)).filter(Boolean);
+  return urls.length ? urls : [fallbackImage];
 });
-const gallery = computed(() => carImages.value);
+const gallery = computed(() => carImages.value.filter((image) => image !== fallbackImage));
 
 onMounted(async () => {
   await wishlist.init();
@@ -184,11 +187,19 @@ async function loadCar() {
   loading.value = true;
   errorMessage.value = '';
   car.value = null;
+  images.value = [];
   currentSlide.value = 0;
   destroySellerMap();
 
   try {
-    car.value = await listingService.getById(String(route.params.id));
+    const id = String(route.params.id);
+    const [listing, listingImages] = await Promise.all([
+      listingService.getById(id),
+      listingService.getImages(id).catch(() => []),
+    ]);
+
+    car.value = listing;
+    images.value = listingImages;
     await nextTick();
     initSellerMap();
   } catch (error: any) {
@@ -333,7 +344,8 @@ function formatKm(n: number) {
   width: 100%;
   max-width: 340px;
   height: 210px;
-  object-fit: contain;
+  object-fit: cover;
+  border-radius: 18px;
 }
 
 .content-section {
