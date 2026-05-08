@@ -4,17 +4,17 @@
       <ion-toolbar>
         <div class="topbar">
           <div class="left">
-          <ion-button fill="clear" size="small" class="back-btn" @click="goBack">
+            <ion-button fill="clear" size="small" class="back-btn" @click="goBack">
               <ion-icon :icon="arrowBackOutline" />
             </ion-button>
-            <img class="seller-avatar" :src="chatAvatar" :alt="chatTitle" />
+            <img class="seller-avatar" :src="logo" :alt="chatTitle" />
             <h1>
               {{ chatTitle }}
               <ion-icon class="verified" :icon="checkmarkCircle" />
             </h1>
           </div>
           <div class="actions">
-            <ion-button fill="clear" size="small"><ion-icon :icon="addOutline" /></ion-button>
+            <ion-button fill="clear" size="small" @click="loadChat"><ion-icon :icon="addOutline" /></ion-button>
             <ion-button fill="clear" size="small"><ion-icon :icon="ellipsisHorizontal" /></ion-button>
           </div>
         </div>
@@ -23,78 +23,147 @@
 
     <ion-content class="chat-content mobile-safe-content">
       <div class="wrap">
-        <div class="day-pill">Today</div>
+        <div class="day-pill">{{ conversation?.listingTitle || 'Conversation' }}</div>
 
-        <div class="bubble left">
-          Hello, welcome to BMW Official Store 🙂
-          <span>09:41</span>
+        <div v-if="loading" class="state-block">
+          <ion-spinner name="crescent" />
+          <p>Loading messages...</p>
         </div>
-        <div class="bubble left">
-          Is there anything we can do to help you? 😀😀
-          <span>09:41</span>
+
+        <div v-else-if="errorMessage" class="state-block">
+          <p>{{ errorMessage }}</p>
+          <ion-button size="small" @click="loadChat">Retry</ion-button>
         </div>
-        <div class="bubble right">
-          Hi Good Morning, I want to buy a BMW M5 Series
-          <span>09:41</span>
+
+        <div v-else-if="!messages.length" class="state-block">
+          <p>No messages yet.</p>
+          <small>Send the first message about this vehicle.</small>
         </div>
+
+        <template v-else>
+          <div
+            v-for="message in messages"
+            :key="message.id"
+            class="bubble"
+            :class="message.sentByCurrentUser ? 'right' : 'left'"
+          >
+            {{ message.content }}
+            <span>{{ formatMessageTime(message.createdAt) }}</span>
+          </div>
+        </template>
       </div>
     </ion-content>
 
     <ion-footer class="ion-no-border composer">
       <div class="composer-wrap">
-        <input type="text" placeholder="Message..." />
-        <ion-button fill="clear" size="small"><ion-icon :icon="imageOutline" /></ion-button>
-        <button class="mic-btn" type="button"><ion-icon :icon="mic" /></button>
+        <input
+          v-model="newMessage"
+          type="text"
+          placeholder="Message..."
+          :disabled="sending"
+          @keyup.enter="sendMessage"
+        />
+        <ion-button fill="clear" size="small" disabled><ion-icon :icon="imageOutline" /></ion-button>
+        <button class="mic-btn" type="button" :disabled="sending || !newMessage.trim()" @click="sendMessage">
+          <ion-spinner v-if="sending" name="crescent" />
+          <ion-icon v-else :icon="sendOutline" />
+        </button>
       </div>
     </ion-footer>
   </ion-page>
 </template>
 
 <script setup lang="ts">
-import { IonButton, IonContent, IonFooter, IonHeader, IonIcon, IonPage, IonToolbar } from '@ionic/vue';
-import { addOutline, arrowBackOutline, checkmarkCircle, ellipsisHorizontal, imageOutline, mic } from 'ionicons/icons';
-import { computed } from 'vue';
+import { IonButton, IonContent, IonFooter, IonHeader, IonIcon, IonPage, IonSpinner, IonToolbar } from '@ionic/vue';
+import { addOutline, arrowBackOutline, checkmarkCircle, ellipsisHorizontal, imageOutline, sendOutline } from 'ionicons/icons';
+import { computed, nextTick, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import bmwStore from '@/assets/logos/bmwStore.png';
-import tesla from '@/assets/logos/tesla.png';
-import honda from '@/assets/logos/honda.png';
-import mercedes from '@/assets/logos/mercedes.png';
-import subaruStore from '@/assets/logos/subaruStore.png';
-import jaguarStore from '@/assets/logos/jaguarStore.png';
+import dayjs from 'dayjs';
+import logo from '@/assets/logos/autovalor_logo.png';
+import { chatService, type ConversationResponse, type MessageResponse } from '@/services/chatService';
+import { useAuthStore } from '@/stores/auth';
 
 const route = useRoute();
 const router = useRouter();
+const auth = useAuthStore();
 
-const chatTitle = computed(() => {
-  const map: Record<string, string> = {
-    'bmw-store': 'BMW Store',
-    'tesla-motor': 'Tesla Motor',
-    'opel-store': 'Opel Store',
-    'nissan-official': 'Nissan Official',
-    'dongfeng-store': 'Dongfeng Store',
-    'mercedes-benz': 'Mercedes-Benz',
-    'honda-motor': 'Honda Motor',
-    'volkswagen-official': 'Volkswagen Official',
-  };
-  return map[String(route.params.id)] ?? 'BMW Store';
+const conversation = ref<ConversationResponse | null>(null);
+const messages = ref<MessageResponse[]>([]);
+const newMessage = ref('');
+const loading = ref(false);
+const sending = ref(false);
+const errorMessage = ref('');
+
+const chatTitle = computed(() => conversation.value?.otherUserName || 'Chat');
+
+onMounted(async () => {
+  await loadChat();
 });
 
-const chatAvatar = computed(() => {
-  const map: Record<string, string> = {
-    'bmw-store': bmwStore,
-    'tesla-motor': tesla,
-    'opel-store': mercedes,
-    'nissan-official': honda,
-    'dongfeng-store': subaruStore,
-    'mercedes-benz': mercedes,
-    'honda-motor': honda,
-    'volkswagen-official': jaguarStore,
-  };
-  return map[String(route.params.id)] ?? bmwStore;
-});
+async function loadChat() {
+  await auth.init();
+  errorMessage.value = '';
+
+  if (!auth.token) {
+    router.push({ path: '/signin', query: { redirect: route.fullPath } });
+    return;
+  }
+
+  loading.value = true;
+  try {
+    const id = String(route.params.id);
+    const [conversationResponse, messageList] = await Promise.all([
+      chatService.getConversation(id, auth.token),
+      chatService.listMessages(id, auth.token),
+    ]);
+    conversation.value = conversationResponse;
+    messages.value = messageList;
+    await scrollToBottom();
+  } catch (error: any) {
+    errorMessage.value = error?.message || 'Could not load the chat.';
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function sendMessage() {
+  await auth.init();
+  const content = newMessage.value.trim();
+
+  if (!auth.token) {
+    router.push({ path: '/signin', query: { redirect: route.fullPath } });
+    return;
+  }
+
+  if (!content || sending.value) return;
+
+  sending.value = true;
+  errorMessage.value = '';
+  try {
+    const sent = await chatService.sendMessage(String(route.params.id), content, auth.token);
+    messages.value.push(sent);
+    newMessage.value = '';
+    await scrollToBottom();
+  } catch (error: any) {
+    errorMessage.value = error?.message || 'Could not send the message.';
+  } finally {
+    sending.value = false;
+  }
+}
+
+async function scrollToBottom() {
+  await nextTick();
+  const content = document.querySelector('ion-content.chat-content') as HTMLIonContentElement | null;
+  await content?.scrollToBottom(250);
+}
 
 function goBack() {
   router.back();
+}
+
+function formatMessageTime(value?: string | null) {
+  if (!value) return '';
+  return dayjs(value).format('HH:mm');
 }
 </script>
 
@@ -116,14 +185,17 @@ function goBack() {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .seller-avatar {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  object-fit: cover;
+  object-fit: contain;
+  padding: 5px;
   border: 1px solid #e7e8ec;
+  background: #f6f6f7;
 }
 
 .back-btn {
@@ -137,11 +209,15 @@ h1 {
   gap: 5px;
   font-size: clamp(18px, 5.5vw, 20px);
   color: #1f222a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .verified {
   font-size: 15px;
   color: #2b7dff;
+  flex-shrink: 0;
 }
 
 .actions ion-button {
@@ -159,12 +235,36 @@ h1 {
 
 .day-pill {
   width: fit-content;
+  max-width: 90%;
   margin: 0 auto 16px;
   padding: 4px 9px;
   border-radius: 8px;
   background: #f0f1f3;
   font-size: 11px;
   color: #767b83;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.state-block {
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  color: #6c7078;
+}
+
+.state-block p {
+  margin: 0;
+  font-size: 15px;
+}
+
+.state-block small {
+  color: #9a9ea6;
 }
 
 .bubble {
@@ -175,6 +275,7 @@ h1 {
   font-size: 15px;
   line-height: 1.35;
   position: relative;
+  word-break: break-word;
 }
 
 .bubble span {
@@ -235,6 +336,10 @@ h1 {
   color: #fff;
   display: grid;
   place-items: center;
+}
+
+.mic-btn:disabled {
+  opacity: 0.45;
 }
 
 @media (max-width: 360px) {
