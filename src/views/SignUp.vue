@@ -10,7 +10,7 @@
 
     <ion-content class="signup-content">
       <div class="signup-container">
-        <h1 class="signup-title">Crear cuenta</h1>
+        <h1 class="signup-title">Create your Account</h1>
 
         <div class="avatar-wrap">
           <div class="avatar-circle">
@@ -23,7 +23,7 @@
 
         <div class="form-block">
           <div class="input-box">
-            <ion-input v-model="fullName" placeholder="Nombre completo" autocomplete="name" />
+            <ion-input v-model="fullName" placeholder="Full name" autocomplete="name" />
           </div>
 
           <div class="input-box">
@@ -36,10 +36,10 @@
             <ion-input
               v-model="password"
               :type="showPassword ? 'text' : 'password'"
-              placeholder="Contraseña"
+              placeholder="Password"
               autocomplete="new-password"
             />
-            <button type="button" class="calendar-trigger" aria-label="Mostrar contraseña" @click="showPassword = !showPassword">
+            <button type="button" class="calendar-trigger" aria-label="Show password" @click="showPassword = !showPassword">
               <ion-icon :icon="showPassword ? eyeOff : eye" class="input-icon" />
             </button>
           </div>
@@ -49,24 +49,24 @@
             <ion-input
               v-model="confirmPassword"
               :type="showPassword ? 'text' : 'password'"
-              placeholder="Confirmar contraseña"
+              placeholder="Confirm password"
               autocomplete="new-password"
               @keyup.enter="handleRegister"
             />
           </div>
         </div>
 
-        <p class="helper-text">Después podrás completar tu perfil desde la pantalla de usuario.</p>
+        <p class="helper-text">You can complete your profile later from the profile screen.</p>
         <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
 
         <ion-button expand="block" class="continue-btn" :disabled="auth.loading" @click="handleRegister">
           <ion-spinner v-if="auth.loading" name="crescent" />
-          <span v-else>Crear cuenta</span>
+          <span v-else>Sign up</span>
         </ion-button>
 
         <div class="signin-row">
-          ¿Ya tienes cuenta?
-          <span class="signin-link" @click="goToSignIn">Inicia sesión</span>
+          Already have an account?
+          <span class="signin-link" @click="goToSignIn">Sign in</span>
         </div>
       </div>
     </ion-content>
@@ -106,17 +106,17 @@ async function handleRegister() {
   errorMessage.value = '';
 
   if (!fullName.value.trim() || !email.value.trim() || !password.value) {
-    errorMessage.value = 'Completa nombre, email y contraseña.';
+    errorMessage.value = 'Complete your name, email and password.';
     return;
   }
 
   if (password.value.length < 8) {
-    errorMessage.value = 'La contraseña debe tener al menos 8 caracteres.';
+    errorMessage.value = 'Password must be at least 8 characters.';
     return;
   }
 
   if (password.value !== confirmPassword.value) {
-    errorMessage.value = 'Las contraseñas no coinciden.';
+    errorMessage.value = 'Passwords do not match.';
     return;
   }
 
@@ -130,7 +130,7 @@ async function handleRegister() {
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/tabs/home';
     router.replace(redirect);
   } catch (error: any) {
-    errorMessage.value = error?.message || auth.error || 'No se pudo crear la cuenta.';
+    errorMessage.value = error?.message || auth.error || 'Could not create the account.';
   }
 }
 
