@@ -46,7 +46,7 @@
             <div v-for="car in lastViewed" :key="car.id" class="product-card last-view-card" @click="goToCar(car.id)">
               <div class="card-image">
                 <img :src="car.image" :alt="car.name" />
-                <button class="card-heart" @click.stop="wishlist.toggle(String(car.id))"><ion-icon :icon="wishlist.isInWishlist(String(car.id)) ? heart : heartOutline" /></button>
+                <button class="card-heart" @click.stop="toggleFavorite(car.id)"><ion-icon :icon="wishlist.isInWishlist(String(car.id)) ? heart : heartOutline" /></button>
               </div>
               <div class="card-info">
                 <div class="card-name">{{ car.name }}</div>
@@ -84,7 +84,7 @@
             <div v-for="car in topDeals" :key="car.id" class="product-card" @click="goToCar(car.id)">
               <div class="card-image">
                 <img :src="car.image" :alt="car.name" />
-                <button class="card-heart" @click.stop="wishlist.toggle(String(car.id))"><ion-icon :icon="wishlist.isInWishlist(String(car.id)) ? heart : heartOutline" /></button>
+                <button class="card-heart" @click.stop="toggleFavorite(car.id)"><ion-icon :icon="wishlist.isInWishlist(String(car.id)) ? heart : heartOutline" /></button>
               </div>
               <div class="card-info">
                 <div class="card-name">{{ car.name }}</div>
@@ -116,9 +116,11 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { listingService, normalizeImageUrl, type ListingResponse } from '@/services/listingService';
 import { useWishlistStore } from '@/stores/wishlist';
+import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();
 const wishlist = useWishlistStore();
+const auth = useAuthStore();
 const query = ref('');
 const listings = ref<ListingResponse[]>([]);
 const loading = ref(false);
@@ -127,7 +129,8 @@ const errorMessage = ref('');
 const fallbackImage = new URL('../assets/logos/autovalor_logo.png', import.meta.url).href;
 
 onMounted(async () => {
-  await wishlist.init();
+  await auth.init();
+  await wishlist.init(auth.token);
   await loadListings();
 });
 
@@ -165,8 +168,19 @@ async function loadListings() {
 }
 
 async function refreshListings(event: CustomEvent) {
+  await auth.init();
+  await wishlist.init(auth.token);
   await loadListings();
   (event.target as HTMLIonRefresherElement).complete();
+}
+
+async function toggleFavorite(id: string | number) {
+  await auth.init();
+  if (!auth.token) {
+    router.push({ path: '/signin', query: { redirect: '/tabs/home' } });
+    return;
+  }
+  await wishlist.toggle(String(id), auth.token);
 }
 
 function toCard(listing: ListingResponse) {
