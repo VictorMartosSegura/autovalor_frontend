@@ -10,16 +10,31 @@
             <h1>My Wishlist</h1>
           </div>
           <div class="actions">
-            <ion-button fill="clear" size="small"><ion-icon :icon="heartOutline" /></ion-button>
-            <ion-button fill="clear" size="small"><ion-icon :icon="searchOutline" /></ion-button>
+            <ion-button fill="clear" size="small" @click="loadFavorites"><ion-icon :icon="heartOutline" /></ion-button>
+            <ion-button fill="clear" size="small" @click="router.push('/search')"><ion-icon :icon="searchOutline" /></ion-button>
           </div>
         </div>
       </ion-toolbar>
     </ion-header>
 
     <ion-content class="mobile-safe-content wishlist-content">
+      <div v-if="loading" class="empty">
+        <ion-spinner name="crescent" />
+        <h3>Loading wishlist...</h3>
+      </div>
+
+      <div v-else-if="errorMessage" class="empty">
+        <h3>{{ errorMessage }}</h3>
+        <ion-button size="small" @click="loadFavorites">Retry</ion-button>
+      </div>
+
+      <div v-else-if="!wishCars.length" class="empty">
+        <h3>Your wishlist is empty</h3>
+        <p>Add cars from Home to see them here.</p>
+      </div>
+
       <draggable
-        v-if="wishCars.length"
+        v-else
         class="grid"
         :model-value="wishCars"
         item-key="id"
@@ -30,50 +45,91 @@
         <template #item="{ element: car }">
           <article class="card" @click="goToCar(car.id)">
             <div class="card-image">
-              <img :src="car.images[0]" :alt="car.brand + ' ' + car.model" />
-              <button class="card-heart" @click.stop="wishlist.toggle(car.id)">
+              <img :src="car.image" :alt="car.name" />
+              <button class="card-heart" @click.stop="removeFavorite(car.id)">
                 <ion-icon :icon="heart" />
               </button>
             </div>
             <div class="card-info">
-              <h3>{{ car.brand }} {{ car.model }}</h3>
+              <h3>{{ car.name }}</h3>
               <div class="card-meta">
-                <span class="rating"><ion-icon :icon="star" /> {{ car.rating }}</span>
-                <span class="badge">{{ car.condition || car.type }}</span>
+                <span class="rating"><ion-icon :icon="star" /> {{ car.year || 'S/A' }}</span>
+                <span class="badge">{{ car.tag }}</span>
               </div>
+              <div class="card-price">{{ formatPrice(car.price) }} €</div>
             </div>
           </article>
         </template>
       </draggable>
-
-      <div v-else class="empty">
-        <h3>Your wishlist is empty</h3>
-        <p>Add cars from Home to see them here.</p>
-      </div>
     </ion-content>
   </ion-page>
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonContent, IonButton, IonIcon } from '@ionic/vue';
-import { computed } from 'vue';
+import { IonPage, IonHeader, IonToolbar, IonContent, IonButton, IonIcon, IonSpinner } from '@ionic/vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { arrowBackOutline, heart, heartOutline, searchOutline, star } from 'ionicons/icons';
 import { useWishlistStore } from '@/stores/wishlist';
-import { CARS, type Car } from '@/data/cars';
+import { useAuthStore } from '@/stores/auth';
+import { listingService, normalizeImageUrl } from '@/services/listingService';
 import draggable from 'vuedraggable';
 
 const router = useRouter();
 const wishlist = useWishlistStore();
-wishlist.init();
+const auth = useAuthStore();
+const loading = ref(false);
+const errorMessage = ref('');
 
-const wishCars = computed(() => {
-  return wishlist.ids
-    .map((id) => CARS.find((c) => c.id === id))
-    .filter((car): car is Car => Boolean(car));
+const fallbackImage = new URL('../assets/logos/autovalor_logo.png', import.meta.url).href;
+
+const wishCars = computed(() => wishlist.favorites.map((favorite) => {
+  const listing = favorite.listing;
+  const image = normalizeImageUrl(listing.images?.[0]?.url) || fallbackImage;
+  return {
+    id: listing.id,
+    image,
+    name: listing.title || `${listing.brand || ''} ${listing.model || ''}`.trim() || 'Vehicle',
+    year: listing.year,
+    tag: listing.status || listing.fuelType || 'Available',
+    price: listing.price || 0,
+  };
+}));
+
+onMounted(async () => {
+  await loadFavorites();
 });
 
-function goToCar(id: string) {
+async function loadFavorites() {
+  await auth.init();
+
+  if (!auth.token) {
+    router.push({ path: '/signin', query: { redirect: '/tabs/wishlist' } });
+    return;
+  }
+
+  loading.value = true;
+  errorMessage.value = '';
+  try {
+    await wishlist.sync(auth.token);
+    await Promise.all(wishlist.favorites.map(async (favorite) => {
+      const images = await listingService.getImages(favorite.listingId).catch(() => favorite.listing.images || []);
+      favorite.listing.images = images;
+    }));
+  } catch (error: any) {
+    errorMessage.value = error?.message || 'Could not load wishlist.';
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function removeFavorite(id: string | number) {
+  await auth.init();
+  if (!auth.token) return;
+  await wishlist.toggle(String(id), auth.token);
+}
+
+function goToCar(id: string | number) {
   router.push(`/car/${id}`);
 }
 
@@ -81,230 +137,64 @@ function goBack() {
   router.back();
 }
 
-function onReorder(newOrder: Car[]) {
-  wishlist.setOrder(newOrder.map((car) => car.id));
+function onReorder(newOrder: Array<{ id: string | number }>) {
+  wishlist.setOrder(newOrder.map((car) => String(car.id)));
+}
+
+function formatPrice(n: number) {
+  return Number(n || 0).toLocaleString('es-ES');
 }
 </script>
+
 <style scoped>
 .wishlist-toolbar {
   --background: #fff;
   padding: 8px var(--app-page-gutter) 6px;
 }
 
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.left {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.back-btn {
-  --padding-start: 0;
-  --padding-end: 0;
-  --color: #202127;
-  margin: 0;
-}
-
-h1 {
-  margin: 0;
-  font-size: clamp(24px, 4.2vw, 28px);
-  font-weight: 700;
-  color: #22242b;
-  letter-spacing: -0.02em;
-}
-
-.actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.actions ion-button {
-  --color: #202127;
-  margin: 0;
-}
-
-.wishlist-content {
-  --background: #fff;
-  --padding-top: 8px;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
-  padding: 22px calc(var(--app-page-gutter) + 6px) 24px;
-}
-
-.card {
-  background: transparent;
-  cursor: pointer;
-  border: 0;
-  margin: 0;
-  text-align: left;
-}
-
-.card:active {
-  transform: scale(0.97);
-}
-
-.drag-ghost {
-  opacity: 0.45;
-}
-
-.drag-chosen {
-  cursor: grabbing;
-}
-
-.card-image {
-  position: relative;
-  height: 142px;
-  background: #f3f3f5;
-  border-radius: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.card-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  padding: 12px;
-}
-
-.card-heart {
-  position: absolute;
-  top: 9px;
-  right: 9px;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: none;
-  background: #121318;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-}
-
-.card-heart ion-icon {
-  width: 14px;
-  height: 14px;
-  color: #fff;
-}
-
-.card-info {
-  padding: 10px 2px 2px;
-}
-
-.card-info h3 {
-  margin: 0 0 6px;
-  font-size: 17px;
-  font-weight: 700;
-  color: #202127;
-  line-height: 1;
-  letter-spacing: -0.02em;
-}
-
-.card-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.rating {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: #5f626a;
-}
-
-.rating ion-icon {
-  width: 11px;
-  height: 11px;
-  color: #111216;
-}
-
-.badge {
-  font-size: 10px;
-  font-weight: 600;
-  padding: 2px 8px;
-  background: #eceef1;
-  color: #4e535d;
-  border-radius: 6px;
-}
-
-.empty {
-  text-align: center;
-  margin-top: 60px;
-  color: #8e8e93;
-}
-
-.empty h3 {
-  font-size: 16px;
-  font-weight: 700;
-  color: #1a1a1a;
-  margin-bottom: 8px;
-}
-
-.empty p {
-  font-size: 14px;
-  margin: 0;
-}
+.topbar { display: flex; align-items: center; justify-content: space-between; }
+.left { display: flex; align-items: center; gap: 6px; }
+.back-btn { --padding-start: 0; --padding-end: 0; --color: #202127; margin: 0; }
+h1 { margin: 0; font-size: clamp(24px, 4.2vw, 28px); font-weight: 700; color: #22242b; letter-spacing: -0.02em; }
+.actions { display: flex; align-items: center; gap: 2px; }
+.actions ion-button { --color: #202127; margin: 0; }
+.wishlist-content { --background: #fff; --padding-top: 8px; }
+.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; padding: 22px calc(var(--app-page-gutter) + 6px) 24px; }
+.card { background: transparent; cursor: pointer; border: 0; margin: 0; text-align: left; }
+.card:active { transform: scale(0.97); }
+.drag-ghost { opacity: 0.45; }
+.drag-chosen { cursor: grabbing; }
+.card-image { position: relative; height: 142px; background: #f3f3f5; border-radius: 18px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.card-image img { width: 100%; height: 100%; object-fit: contain; padding: 12px; }
+.card-heart { position: absolute; top: 9px; right: 9px; width: 26px; height: 26px; border-radius: 50%; border: none; background: #121318; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2); }
+.card-heart ion-icon { width: 14px; height: 14px; color: #fff; }
+.card-info { padding: 10px 2px 2px; }
+.card-info h3 { margin: 0 0 6px; font-size: 17px; font-weight: 700; color: #202127; line-height: 1.05; letter-spacing: -0.02em; }
+.card-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.rating { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #5f626a; }
+.rating ion-icon { width: 11px; height: 11px; color: #111216; }
+.badge { font-size: 10px; font-weight: 600; padding: 2px 8px; background: #eceef1; color: #4e535d; border-radius: 6px; }
+.card-price { font-size: 15px; font-weight: 800; color: #1f222a; }
+.empty { min-height: 280px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 10px; color: #8e8e93; padding: 30px; }
+.empty h3 { font-size: 16px; font-weight: 700; color: #1a1a1a; margin: 0; }
+.empty p { font-size: 14px; margin: 0; }
 
 @media (max-width: 430px) {
-  h1 {
-    font-size: 26px;
-  }
-
-  .card-info h3 {
-    font-size: 16px;
-  }
+  h1 { font-size: 26px; }
+  .card-info h3 { font-size: 16px; }
 }
 
 @media (max-width: 360px) {
-  h1 {
-    font-size: 24px;
-  }
-
-  .card-image {
-    height: 124px;
-  }
-
-  .card-info h3 {
-    font-size: 15px;
-  }
+  h1 { font-size: 24px; }
+  .card-image { height: 124px; }
+  .card-info h3 { font-size: 15px; }
 }
 
 @media (orientation: landscape) and (max-height: 500px) {
-  .wishlist-toolbar {
-    padding-top: 4px;
-    padding-bottom: 4px;
-  }
-
-  h1 {
-    font-size: 24px;
-  }
-
-  .grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .card-image {
-    height: 110px;
-  }
-
-  .card-info h3 {
-    font-size: 20px;
-  }
+  .wishlist-toolbar { padding-top: 4px; padding-bottom: 4px; }
+  h1 { font-size: 24px; }
+  .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .card-image { height: 110px; }
+  .card-info h3 { font-size: 20px; }
 }
 </style>
