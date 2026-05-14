@@ -14,6 +14,7 @@
             </h1>
           </div>
           <div class="actions">
+            <span class="socket-dot" :class="{ online: socketConnected }" />
             <ion-button fill="clear" size="small" @click="loadChat"><ion-icon :icon="addOutline" /></ion-button>
             <ion-button fill="clear" size="small"><ion-icon :icon="ellipsisHorizontal" /></ion-button>
           </div>
@@ -76,11 +77,12 @@
 <script setup lang="ts">
 import { IonButton, IonContent, IonFooter, IonHeader, IonIcon, IonPage, IonSpinner, IonToolbar } from '@ionic/vue';
 import { addOutline, arrowBackOutline, checkmarkCircle, ellipsisHorizontal, imageOutline, sendOutline } from 'ionicons/icons';
-import { computed, nextTick, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import dayjs from 'dayjs';
 import logo from '@/assets/logos/autovalor_logo.png';
 import { chatService, type ConversationResponse, type MessageResponse } from '@/services/chatService';
+import { connectChatSocket } from '@/services/chatSocketService';
 import { useAuthStore } from '@/stores/auth';
 
 const route = useRoute();
@@ -93,11 +95,17 @@ const newMessage = ref('');
 const loading = ref(false);
 const sending = ref(false);
 const errorMessage = ref('');
+const socketConnected = ref(false);
+let socket: WebSocket | null = null;
 
 const chatTitle = computed(() => conversation.value?.otherUserName || 'Chat');
 
 onMounted(async () => {
   await loadChat();
+});
+
+onBeforeUnmount(() => {
+  disconnectSocket();
 });
 
 async function loadChat() {
@@ -118,12 +126,52 @@ async function loadChat() {
     ]);
     conversation.value = conversationResponse;
     messages.value = messageList;
+    connectSocket();
     await scrollToBottom();
   } catch (error: any) {
     errorMessage.value = error?.message || 'Could not load the chat.';
   } finally {
     loading.value = false;
   }
+}
+
+function connectSocket() {
+  if (!auth.token) return;
+
+  disconnectSocket();
+
+  socket = connectChatSocket(String(route.params.id), auth.token, {
+    onOpen: () => {
+      socketConnected.value = true;
+    },
+    onClose: () => {
+      socketConnected.value = false;
+    },
+    onError: () => {
+      socketConnected.value = false;
+    },
+    onMessage: async (message) => {
+      addOrReplaceMessage(message);
+      await scrollToBottom();
+    },
+  });
+}
+
+function disconnectSocket() {
+  socketConnected.value = false;
+  if (socket) {
+    socket.close();
+    socket = null;
+  }
+}
+
+function addOrReplaceMessage(message: MessageResponse) {
+  const index = messages.value.findIndex((current) => current.id === message.id);
+  if (index >= 0) {
+    messages.value[index] = message;
+    return;
+  }
+  messages.value.push(message);
 }
 
 async function sendMessage() {
@@ -141,7 +189,7 @@ async function sendMessage() {
   errorMessage.value = '';
   try {
     const sent = await chatService.sendMessage(String(route.params.id), content, auth.token);
-    messages.value.push(sent);
+    addOrReplaceMessage(sent);
     newMessage.value = '';
     await scrollToBottom();
   } catch (error: any) {
@@ -220,8 +268,26 @@ h1 {
   flex-shrink: 0;
 }
 
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
 .actions ion-button {
   --color: #1f222a;
+}
+
+.socket-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #d1d5db;
+  display: inline-block;
+}
+
+.socket-dot.online {
+  background: #22c55e;
 }
 
 .chat-content {
