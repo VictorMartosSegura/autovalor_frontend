@@ -20,25 +20,40 @@
         </div>
 
         <div class="result-head">
-          <p class="result-title">Results for "{{ query || 'Sports Car' }}"</p>
+          <p class="result-title">Results for "{{ query || selectedBrand || 'All cars' }}"</p>
           <p class="result-count">{{ matchesCount }} found</p>
         </div>
 
-        <div class="results-grid">
-          <div v-for="car in filteredCars" :key="car.id" class="product-card" @click="goToCar(car.id)">
+        <div v-if="loading" class="state-block">
+          <ion-spinner name="crescent" />
+          <p>Loading results...</p>
+        </div>
+
+        <div v-else-if="errorMessage" class="state-block">
+          <p>{{ errorMessage }}</p>
+          <ion-button size="small" @click="loadResults">Retry</ion-button>
+        </div>
+
+        <div v-else-if="!resultCars.length" class="state-block">
+          <h3>No cars found</h3>
+          <p>Try another search or brand.</p>
+        </div>
+
+        <div v-else class="results-grid">
+          <div v-for="car in resultCars" :key="car.id" class="product-card" @click="goToCar(car.id)">
             <div class="card-image">
-              <img :src="car.images[0]" :alt="`${car.brand} ${car.model}`" />
+              <img :src="car.image" :alt="car.name" />
               <button class="card-heart" @click.stop="toggleWish(car.id)">
-                <ion-icon :icon="wishlist.isInWishlist(car.id) ? heart : heartOutline" />
+                <ion-icon :icon="wishlist.isInWishlist(String(car.id)) ? heart : heartOutline" />
               </button>
             </div>
             <div class="card-info">
-              <div class="card-name">{{ formatName(car.brand, car.model) }}</div>
+              <div class="card-name">{{ car.name }}</div>
               <div class="card-meta">
-                <span class="card-rating"><ion-icon :icon="star" /> {{ car.rating }}</span>
-                <span class="card-badge">{{ car.condition ?? 'New' }}</span>
+                <span class="card-rating"><ion-icon :icon="star" /> {{ car.year || 'S/A' }}</span>
+                <span class="card-badge">{{ car.tag }}</span>
               </div>
-              <div class="card-price">${{ formatPrice(car.price) }}</div>
+              <div class="card-price">{{ formatPrice(car.price) }} €</div>
             </div>
           </div>
         </div>
@@ -48,51 +63,82 @@
 </template>
 
 <script setup lang="ts">
-import { IonButton, IonContent, IonIcon, IonInput, IonPage } from '@ionic/vue';
+import { IonButton, IonContent, IonIcon, IonInput, IonPage, IonSpinner } from '@ionic/vue';
 import { arrowBackOutline, heart, heartOutline, optionsOutline, searchOutline, star } from 'ionicons/icons';
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import Fuse from 'fuse.js';
-import { CARS } from '@/data/cars';
 import { useWishlistStore } from '@/stores/wishlist';
+import { useAuthStore } from '@/stores/auth';
+import { listingService, normalizeImageUrl, type ListingResponse } from '@/services/listingService';
 
 const route = useRoute();
 const router = useRouter();
 const wishlist = useWishlistStore();
-wishlist.init();
+const auth = useAuthStore();
 
-const query = ref(String(route.query.q ?? 'Sports Car'));
-const fuse = new Fuse(CARS, {
-  includeScore: true,
-  threshold: 0.35,
-  ignoreLocation: true,
-  keys: [
-    { name: 'brand', weight: 0.35 },
-    { name: 'model', weight: 0.35 },
-    { name: 'type', weight: 0.2 },
-    { name: 'condition', weight: 0.1 },
-  ],
+const query = ref(String(route.query.q ?? ''));
+const selectedBrand = ref(String(route.query.brand ?? ''));
+const listings = ref<ListingResponse[]>([]);
+const totalElements = ref(0);
+const loading = ref(false);
+const errorMessage = ref('');
+const fallbackImage = new URL('../assets/logos/autovalor_logo.png', import.meta.url).href;
+
+onMounted(async () => {
+  await auth.init();
+  await wishlist.init(auth.token);
+  await loadResults();
 });
 
-const filteredCars = computed(() => {
-  const q = query.value.trim().toLowerCase();
-  if (!q) return CARS.slice(0, 6);
+watch(
+  () => route.query,
+  async () => {
+    query.value = String(route.query.q ?? '');
+    selectedBrand.value = String(route.query.brand ?? '');
+    await loadResults();
+  }
+);
 
-  const fuzzy = fuse.search(q).map((r) => r.item);
-  const list = fuzzy.length ? fuzzy : CARS.filter((c) => {
-    const full = `${c.brand} ${c.model} ${c.type}`.toLowerCase();
-    return full.includes(q);
-  });
+const resultCars = computed(() => listings.value.map((listing) => {
+  const image = normalizeImageUrl(listing.images?.[0]?.url) || fallbackImage;
+  return {
+    id: listing.id,
+    image,
+    name: listing.title || `${listing.brand || ''} ${listing.model || ''}`.trim() || 'Vehicle',
+    year: listing.year,
+    tag: listing.status || listing.fuelType || 'Available',
+    price: listing.price || 0,
+  };
+}));
 
-  return (list.length ? list : CARS).slice(0, 6);
-});
+const matchesCount = computed(() => totalElements.value || resultCars.value.length);
 
-const matchesCount = computed(() => {
-  const q = query.value.trim();
-  if (!q) return CARS.length;
-  const fuzzy = fuse.search(q).length;
-  return fuzzy || CARS.filter((c) => `${c.brand} ${c.model} ${c.type}`.toLowerCase().includes(q.toLowerCase())).length;
-});
+async function loadResults() {
+  loading.value = true;
+  errorMessage.value = '';
+
+  try {
+    const response = await listingService.list({
+      q: query.value,
+      brand: selectedBrand.value,
+      page: 0,
+      size: 50,
+      sort: 'newest',
+    });
+
+    const content = Array.isArray(response) ? response : response.content;
+    totalElements.value = Array.isArray(response) ? response.length : response.totalElements;
+
+    listings.value = await Promise.all(content.map(async (listing) => {
+      const images = await listingService.getImages(listing.id).catch(() => listing.images || []);
+      return { ...listing, images };
+    }));
+  } catch (error: any) {
+    errorMessage.value = error?.message || 'Could not load search results.';
+  } finally {
+    loading.value = false;
+  }
+}
 
 function applySearch() {
   router.replace({ path: '/search/results', query: { q: query.value } });
@@ -102,186 +148,60 @@ function goBack() {
   router.back();
 }
 
-function goToCar(id: string) {
+function goToCar(id: string | number) {
   router.push(`/car/${id}`);
 }
 
-function toggleWish(id: string) {
-  wishlist.toggle(id);
+async function toggleWish(id: string | number) {
+  await auth.init();
+  if (!auth.token) {
+    router.push({ path: '/signin', query: { redirect: route.fullPath } });
+    return;
+  }
+  await wishlist.toggle(String(id), auth.token);
 }
 
 function formatPrice(n: number) {
-  return n.toLocaleString('en-US');
-}
-
-function formatName(brand: string, model: string) {
-  if (brand === 'Chevrolet' && model === 'Camaro') return 'Camaro Sports';
-  if (brand === 'Ferrari') return 'Ferrari Sports';
-  if (brand === 'McLaren') return 'McLaren Sports';
-  if (brand === 'Toyota') return 'Toyota Sports';
-  return `${brand} ${model}`;
+  return Number(n || 0).toLocaleString('es-ES');
 }
 </script>
 
 <style scoped>
-.results-page {
-  --background: #ffffff;
+.results-page { --background: #ffffff; }
+.results-container { min-height: 100%; padding: 42px 16px 24px; font-family: 'SF Pro Text', 'Segoe UI', Arial, sans-serif; }
+.search-top-row { display: flex; align-items: center; gap: 8px; }
+.back-btn { --color: #1f222a; --padding-start: 0; --padding-end: 0; margin: 0; }
+.search-input-wrap { flex: 1; height: 42px; border-radius: 10px; background: #f5f6f7; display: flex; align-items: center; gap: 8px; padding: 0 10px; }
+.search-icon, .filter-icon { font-size: 18px; color: #6f727a; }
+.search-input { flex: 1; --color: #1f222a; --placeholder-color: #a4a6ad; --placeholder-opacity: 1; font-size: 14px; }
+.result-head { margin-top: 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.result-title { margin: 0; font-size: 24px; font-weight: 700; color: #1f222a; line-height: 1.05; }
+.result-count { margin: 0; font-size: 14px; font-weight: 700; color: #1f222a; white-space: nowrap; }
+.state-block { min-height: 260px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 10px; color: #7d8088; }
+.state-block h3, .state-block p { margin: 0; }
+.results-grid { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.product-card { background: #f6f6f7; border-radius: 16px; overflow: hidden; cursor: pointer; }
+.card-image { position: relative; height: 120px; display: flex; align-items: center; justify-content: center; padding: 10px; }
+.card-image img { width: 100%; height: 100%; object-fit: contain; }
+.card-heart { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: 50%; border: 0; background: #fff; display: grid; place-items: center; }
+.card-heart ion-icon { font-size: 14px; color: #e11d48; }
+.card-info { padding: 10px; }
+.card-name { font-size: 15px; font-weight: 700; color: #1f222a; margin-bottom: 4px; line-height: 1.1; }
+.card-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.card-rating { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #80838a; }
+.card-rating ion-icon { font-size: 12px; color: #ff9500; }
+.card-badge { background: #eceeef; border-radius: 6px; padding: 2px 7px; font-size: 10px; color: #666a72; font-weight: 700; }
+.card-price { font-size: 15px; font-weight: 800; color: #1f222a; }
+
+@media (max-width: 360px) {
+  .results-container { padding-left: 12px; padding-right: 12px; }
+  .result-title { font-size: 20px; }
+  .card-image { height: 108px; }
+  .card-name { font-size: 14px; }
 }
 
-.results-container {
-  min-height: 100%;
-  padding: 42px 16px 24px;
-  font-family: 'SF Pro Text', 'Segoe UI', Arial, sans-serif;
-}
-
-.search-top-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.back-btn {
-  --color: #1f222a;
-  --padding-start: 0;
-  --padding-end: 0;
-  margin: 0;
-}
-
-.search-input-wrap {
-  flex: 1;
-  height: 42px;
-  border-radius: 10px;
-  background: #f5f6f7;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 10px;
-}
-
-.search-icon,
-.filter-icon {
-  font-size: 18px;
-  color: #6f727a;
-}
-
-.search-input {
-  flex: 1;
-  --color: #1f222a;
-  --placeholder-color: #a4a6ad;
-  --placeholder-opacity: 1;
-  font-size: 14px;
-}
-
-.result-head {
-  margin-top: 14px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.result-title {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 700;
-  color: #1f222a;
-}
-
-.result-count {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 700;
-  color: #1f222a;
-}
-
-.results-grid {
-  margin-top: 12px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.product-card {
-  background: #f6f6f7;
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-.card-image {
-  position: relative;
-  height: 120px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px;
-}
-
-.card-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.card-heart {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 0;
-  background: #fff;
-  display: grid;
-  place-items: center;
-}
-
-.card-heart ion-icon {
-  font-size: 14px;
-  color: #1f222a;
-}
-
-.card-info {
-  padding: 10px;
-}
-
-.card-name {
-  font-size: 15px;
-  font-weight: 700;
-  color: #1f222a;
-  margin-bottom: 4px;
-}
-
-.card-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.card-rating {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: #80838a;
-}
-
-.card-rating ion-icon {
-  font-size: 12px;
-  color: #ff9500;
-}
-
-.card-badge {
-  background: #eceeef;
-  border-radius: 6px;
-  padding: 2px 7px;
-  font-size: 10px;
-  color: #666a72;
-  font-weight: 700;
-}
-
-.card-price {
-  font-size: 15px;
-  font-weight: 800;
-  color: #1f222a;
+@media (min-width: 768px) {
+  .results-container { max-width: 780px; margin: 0 auto; }
+  .results-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 </style>
