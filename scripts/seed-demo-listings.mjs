@@ -10,7 +10,7 @@ const carsDir = path.join(projectRoot, 'src', 'assets', 'cars');
 
 const demoListings = [
   {
-    user: { name: 'Prueba 1', email: 'prueba1@gmail.com', password: 'prueba1' },
+    user: { name: 'Pruebas 1', email: 'pruebas1@gmail.com', password: 'prueba11' },
     images: ['bmw_m5.png', 'bmw_m5_1.png'],
     listing: {
       title: 'BMW M5 Competition',
@@ -40,7 +40,7 @@ const demoListings = [
     },
   },
   {
-    user: { name: 'Prueba 2', email: 'prueba2@gmail.com', password: 'prueba2' },
+    user: { name: 'Pruebas 2', email: 'pruebas2@gmail.com', password: 'prueba22' },
     images: ['chevrolet_camaro.png', 'chevrolet_camaro1.png'],
     listing: {
       title: 'Chevrolet Camaro SS',
@@ -70,7 +70,7 @@ const demoListings = [
     },
   },
   {
-    user: { name: 'Prueba 3', email: 'prueba3@gmail.com', password: 'prueba3' },
+    user: { name: 'Pruebas 3', email: 'pruebas3@gmail.com', password: 'prueba33' },
     images: ['ferrari_race.png', 'ferrari_race1.png'],
     listing: {
       title: 'Ferrari 488 GTB',
@@ -100,7 +100,7 @@ const demoListings = [
     },
   },
   {
-    user: { name: 'Prueba 4', email: 'prueba4@gmail.com', password: 'prueba4' },
+    user: { name: 'Pruebas 4', email: 'pruebas4@gmail.com', password: 'prueba44' },
     images: ['jaguar_f_type.png', 'jaguar_f_type1.png'],
     listing: {
       title: 'Jaguar F-Type R',
@@ -130,7 +130,7 @@ const demoListings = [
     },
   },
   {
-    user: { name: 'Prueba 5', email: 'prueba5@gmail.com', password: 'prueba5' },
+    user: { name: 'Pruebas 5', email: 'pruebas5@gmail.com', password: 'prueba55' },
     images: ['lamborghini_huracan.png', 'lamborghini_huracan1.png'],
     listing: {
       title: 'Lamborghini Huracan EVO',
@@ -160,7 +160,7 @@ const demoListings = [
     },
   },
   {
-    user: { name: 'Prueba 6', email: 'prueba6@gmail.com', password: 'prueba6' },
+    user: { name: 'Pruebas 6', email: 'pruebas6@gmail.com', password: 'prueba66' },
     images: ['mclaren_720s.png', 'mclaren_720s1.png'],
     listing: {
       title: 'McLaren 720S Performance',
@@ -190,7 +190,7 @@ const demoListings = [
     },
   },
   {
-    user: { name: 'Prueba 7', email: 'prueba7@gmail.com', password: 'prueba7' },
+    user: { name: 'Pruebas 7', email: 'pruebas7@gmail.com', password: 'prueba77' },
     images: ['mclaren_black.png', 'mclaren_black1.png'],
     listing: {
       title: 'McLaren GT Black Edition',
@@ -220,7 +220,7 @@ const demoListings = [
     },
   },
   {
-    user: { name: 'Prueba 8', email: 'prueba8@gmail.com', password: 'prueba8' },
+    user: { name: 'Pruebas 8', email: 'pruebas8@gmail.com', password: 'prueba88' },
     images: ['subaru_wrx.png', 'subaru_wrx1.png'],
     listing: {
       title: 'Subaru WRX STI',
