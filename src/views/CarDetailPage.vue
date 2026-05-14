@@ -182,7 +182,8 @@ const carImages = computed(() => {
 const gallery = computed(() => carImages.value.filter((image) => image !== fallbackImage));
 
 onMounted(async () => {
-  await wishlist.init();
+  await auth.init();
+  await wishlist.init(auth.token);
   await loadCar();
 });
 
@@ -281,8 +282,13 @@ function destroySellerMap() {
   }
 }
 
-function toggleWish() {
-  if (car.value) wishlist.toggle(String(car.value.id));
+async function toggleWish() {
+  await auth.init();
+  if (!auth.token) {
+    router.push({ path: '/signin', query: { redirect: route.fullPath } });
+    return;
+  }
+  if (car.value) await wishlist.toggle(String(car.value.id), auth.token);
 }
 
 function formatPrice(n: number) {
