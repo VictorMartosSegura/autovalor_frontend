@@ -152,7 +152,11 @@ async function loadListings() {
   loading.value = true;
   errorMessage.value = '';
   try {
-    listings.value = await listingService.listAllPublic();
+    const publicListings = await listingService.listAllPublic();
+    listings.value = await Promise.all(publicListings.map(async (listing) => {
+      const images = await listingService.getImages(listing.id).catch(() => listing.images || []);
+      return { ...listing, images };
+    }));
   } catch (error: any) {
     errorMessage.value = error?.message || 'No se pudieron cargar los anuncios.';
   } finally {
