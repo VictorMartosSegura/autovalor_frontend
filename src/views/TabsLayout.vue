@@ -19,8 +19,11 @@
           <ion-label>Sell</ion-label>
         </ion-tab-button>
 
-        <ion-tab-button tab="messages" href="/tabs/messages">
-          <ion-icon :icon="chatbubbleEllipsesOutline" />
+        <ion-tab-button tab="messages" href="/tabs/messages" class="messages-tab">
+          <div class="tab-icon-wrap">
+            <ion-icon :icon="chatbubbleEllipsesOutline" />
+            <span v-if="chat.unreadTotal > 0" class="tab-badge">{{ badgeText }}</span>
+          </div>
           <ion-label>Message</ion-label>
         </ion-tab-button>
 
@@ -43,6 +46,7 @@ import {
   IonIcon,
   IonLabel,
 } from '@ionic/vue';
+import { computed, onMounted, onBeforeUnmount } from 'vue';
 
 import {
   chatbubbleEllipsesOutline,
@@ -51,6 +55,31 @@ import {
   receiptOutline,
   walletOutline,
 } from 'ionicons/icons';
+import { useAuthStore } from '@/stores/auth';
+import { useChatStore } from '@/stores/chat';
+
+const auth = useAuthStore();
+const chat = useChatStore();
+let unreadInterval: ReturnType<typeof window.setInterval> | null = null;
+
+const badgeText = computed(() => chat.unreadTotal > 9 ? '9+' : String(chat.unreadTotal));
+
+onMounted(async () => {
+  await auth.init();
+  await chat.sync(auth.token);
+
+  unreadInterval = window.setInterval(async () => {
+    await auth.init();
+    await chat.sync(auth.token);
+  }, 10000);
+});
+
+onBeforeUnmount(() => {
+  if (unreadInterval) {
+    window.clearInterval(unreadInterval);
+    unreadInterval = null;
+  }
+});
 </script>
 <style scoped>
 .custom-tabbar {
@@ -77,6 +106,32 @@ ion-tab-button ion-icon {
   font-size: 18px;
 }
 
+.tab-icon-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 20px;
+}
+
+.tab-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #111216;
+  color: #fff;
+  font-size: 10px;
+  line-height: 17px;
+  font-weight: 800;
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(17, 18, 22, 0.22);
+}
+
 @media (orientation: landscape) and (max-height: 500px) {
   .custom-tabbar {
     padding-top: 2px;
@@ -90,6 +145,15 @@ ion-tab-button ion-icon {
 
   ion-tab-button ion-icon {
     font-size: 16px;
+  }
+
+  .tab-badge {
+    top: -4px;
+    right: -4px;
+    min-width: 15px;
+    height: 15px;
+    font-size: 9px;
+    line-height: 15px;
   }
 }
 </style>
