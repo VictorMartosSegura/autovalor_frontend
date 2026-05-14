@@ -55,18 +55,19 @@
 <script setup lang="ts">
 import { IonPage, IonHeader, IonToolbar, IonContent, IonAvatar, IonButton, IonIcon, IonSpinner } from '@ionic/vue';
 import { ellipsisHorizontal, searchOutline } from 'ionicons/icons';
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import dayjs from 'dayjs';
 import logo from '@/assets/logos/autovalor_logo.png';
-import { chatService, type ConversationResponse } from '@/services/chatService';
 import { useAuthStore } from '@/stores/auth';
+import { useChatStore } from '@/stores/chat';
 
 const router = useRouter();
 const auth = useAuthStore();
-const conversations = ref<ConversationResponse[]>([]);
+const chat = useChatStore();
 const loading = ref(false);
 const errorMessage = ref('');
+const conversations = computed(() => chat.conversations);
 
 onMounted(async () => {
   await loadConversations();
@@ -83,7 +84,7 @@ async function loadConversations() {
 
   loading.value = true;
   try {
-    conversations.value = await chatService.listConversations(auth.token);
+    await chat.sync(auth.token);
   } catch (error: any) {
     errorMessage.value = error?.message || 'Could not load conversations.';
   } finally {
@@ -92,6 +93,7 @@ async function loadConversations() {
 }
 
 function openChat(id: string | number) {
+  chat.markConversationRead(id);
   router.push(`/chat/${id}`);
 }
 
