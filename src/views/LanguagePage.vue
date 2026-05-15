@@ -20,7 +20,7 @@
         <button class="language-row" :class="{ active: prefs.language === 'en' }" @click="selectLanguage('en')">
           <div>
             <strong>{{ prefs.t('english') }}</strong>
-            <p>AutoValor in English</p>
+            <p>{{ prefs.t('autoValorInEnglish') }}</p>
           </div>
           <ion-icon :icon="prefs.language === 'en' ? radioButtonOnOutline : radioButtonOffOutline" />
         </button>
@@ -28,7 +28,7 @@
         <button class="language-row" :class="{ active: prefs.language === 'es' }" @click="selectLanguage('es')">
           <div>
             <strong>{{ prefs.t('spanish') }}</strong>
-            <p>AutoValor en español</p>
+            <p>{{ prefs.t('autoValorInSpanish') }}</p>
           </div>
           <ion-icon :icon="prefs.language === 'es' ? radioButtonOnOutline : radioButtonOffOutline" />
         </button>
