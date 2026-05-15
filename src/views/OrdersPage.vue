@@ -5,7 +5,7 @@
         <div class="head-row">
           <div class="brand-row">
             <img :src="logo" alt="AutoValor" class="logo" />
-            <h1>My Orders</h1>
+            <h1>{{ prefs.t('myOrders') }}</h1>
           </div>
           <div class="head-actions">
             <ion-button fill="clear" size="small" @click="segment = 'active'"><ion-icon :icon="addOutline" /></ion-button>
@@ -14,8 +14,8 @@
         </div>
 
         <div class="tabs-row">
-          <button class="tab-btn" :class="{ active: segment === 'active' }" @click="segment = 'active'">Active</button>
-          <button class="tab-btn" :class="{ active: segment === 'history' }" @click="segment = 'history'">Completed</button>
+          <button class="tab-btn" :class="{ active: segment === 'active' }" @click="segment = 'active'">{{ prefs.t('active') }}</button>
+          <button class="tab-btn" :class="{ active: segment === 'history' }" @click="segment = 'history'">{{ prefs.t('completed') }}</button>
         </div>
       </ion-toolbar>
     </ion-header>
@@ -23,18 +23,18 @@
     <ion-content class="orders-content" @touchstart="onTouchStart" @touchend="onTouchEnd">
       <div class="list-wrap" v-if="segment === 'active'">
         <div v-if="!activeOrders.length" class="empty-state">
-          <h3>No active orders</h3>
-          <p>Accepted offers will appear here after checkout.</p>
+          <h3>{{ prefs.t('noActiveOrders') }}</h3>
+          <p>{{ prefs.t('acceptedOffersAppear') }}</p>
         </div>
 
         <button v-for="order in activeOrders" :key="order.id" class="order-card" @click="track(order.id)">
           <img :src="order.image || logo" :alt="order.title" class="car-img" />
           <div class="order-info">
             <h3>{{ order.title }}</h3>
-            <p class="meta"><span class="dot"></span> {{ order.color || 'Color' }}</p>
+            <p class="meta"><span class="dot"></span> {{ order.color || prefs.t('color') }}</p>
             <div class="bottom-row">
               <strong>{{ money(order.price) }}</strong>
-              <span class="pill">Track Order</span>
+              <span class="pill">{{ prefs.t('trackOrder') }}</span>
             </div>
           </div>
         </button>
@@ -42,18 +42,18 @@
 
       <div class="list-wrap" v-else>
         <div v-if="!completedOrders.length" class="empty-state">
-          <h3>No completed orders</h3>
-          <p>Delivered orders will appear here.</p>
+          <h3>{{ prefs.t('noCompletedOrders') }}</h3>
+          <p>{{ prefs.t('deliveredOrdersAppear') }}</p>
         </div>
 
         <button v-for="order in completedOrders" :key="order.id" class="order-card" @click="review(order.id)">
           <img :src="order.image || logo" :alt="order.title" class="car-img" />
           <div class="order-info">
             <h3>{{ order.title }}</h3>
-            <p class="meta"><span class="dot completed-dot"></span> {{ order.color || 'Color' }} <span class="badge">Completed</span></p>
+            <p class="meta"><span class="dot completed-dot"></span> {{ order.color || prefs.t('color') }} <span class="badge">{{ prefs.t('completed') }}</span></p>
             <div class="bottom-row">
               <strong>{{ money(order.price) }}</strong>
-              <span class="pill">Leave Review</span>
+              <span class="pill">{{ prefs.t('leaveReview') }}</span>
             </div>
           </div>
         </button>
@@ -71,10 +71,12 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import logo from '@/assets/logos/autovalor_logo.png';
 import { useDemoOrdersStore } from '@/stores/demoOrders';
+import { usePreferencesStore } from '@/stores/preferences';
 
 const router = useRouter();
 const route = useRoute();
 const orders = useDemoOrdersStore();
+const prefs = usePreferencesStore();
 const storedSegment = window.sessionStorage.getItem('orders_default_segment');
 if (storedSegment) window.sessionStorage.removeItem('orders_default_segment');
 const initialSegment = (storedSegment === 'active' || String(route.query.segment ?? 'history') === 'active') ? 'active' : 'history';
@@ -87,6 +89,7 @@ const activeOrders = computed(() => orders.orders.filter((order) => order.status
 const completedOrders = computed(() => orders.orders.filter((order) => order.status === 'COMPLETED'));
 
 onMounted(() => {
+  prefs.init();
   orders.init();
 });
 
@@ -95,7 +98,7 @@ function track(id: string) {
 }
 
 function review(id: string) {
-  toastMessage.value = `Review for ${id} (simulated)`;
+  toastMessage.value = prefs.t('reviewSimulated', { id });
   toastOpen.value = true;
 }
 
