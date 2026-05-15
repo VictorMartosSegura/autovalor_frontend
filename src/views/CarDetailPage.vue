@@ -97,14 +97,7 @@
         <div v-if="gallery.length" class="section">
           <h3>Gallery Photos</h3>
           <div class="gallery">
-            <button
-              v-for="(img, i) in gallery"
-              :key="i"
-              type="button"
-              class="gallery-item"
-              :class="{ active: currentSlide === i }"
-              @click="goToSlide(i)"
-            >
+            <button v-for="(img, i) in gallery" :key="i" type="button" class="gallery-item" :class="{ active: currentSlide === i }" @click="goToSlide(i)">
               <img :src="img" :alt="`${car.brand} gallery ${i + 1}`" />
             </button>
           </div>
@@ -138,12 +131,8 @@
                 <p class="seller-type">{{ car.sellerType || 'Private seller' }}</p>
               </div>
               <div class="seller-actions">
-                <ion-button fill="clear" size="small" @click="contactSeller">
-                  <ion-icon :icon="chatbubbleOutline" />
-                </ion-button>
-                <ion-button fill="clear" size="small">
-                  <ion-icon :icon="callOutline" />
-                </ion-button>
+                <ion-button fill="clear" size="small" @click="contactSeller"><ion-icon :icon="chatbubbleOutline" /></ion-button>
+                <ion-button fill="clear" size="small"><ion-icon :icon="callOutline" /></ion-button>
               </div>
             </div>
           </div>
@@ -171,27 +160,14 @@
 </template>
 
 <script setup lang="ts">
-import {
-  IonBackButton,
-  IonButton,
-  IonButtons,
-  IonContent,
-  IonFooter,
-  IonHeader,
-  IonIcon,
-  IonPage,
-  IonSpinner,
-  IonToolbar,
-} from '@ionic/vue';
+import { IonBackButton, IonButton, IonButtons, IonContent, IonFooter, IonHeader, IonIcon, IonPage, IonSpinner, IonToolbar } from '@ionic/vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import dayjs from 'dayjs';
 import { useRoute, useRouter } from 'vue-router';
 import maplibregl, { type Map as MapLibreMap } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-
 import { Swiper, SwiperSlide } from 'swiper/vue';
 import 'swiper/swiper-bundle.css';
-
 import { callOutline, chatbubbleOutline, checkmarkCircle, heart, heartOutline } from 'ionicons/icons';
 import { useWishlistStore } from '@/stores/wishlist';
 import { useAuthStore } from '@/stores/auth';
@@ -241,9 +217,7 @@ onMounted(async () => {
   await loadCar();
 });
 
-onBeforeUnmount(() => {
-  destroySellerMap();
-});
+onBeforeUnmount(() => destroySellerMap());
 
 async function loadCar() {
   loading.value = true;
@@ -254,9 +228,10 @@ async function loadCar() {
   destroySellerMap();
 
   try {
+    await auth.init();
     const id = String(route.params.id);
     const [listing, listingImages] = await Promise.all([
-      listingService.getById(id),
+      listingService.getById(id, auth.token),
       listingService.getImages(id).catch(() => []),
     ]);
 
@@ -289,12 +264,7 @@ async function saveOwnerChanges() {
   manageError.value = false;
 
   try {
-    const payload = listingToPayload({
-      ...car.value,
-      price: Number(editPrice.value || 0),
-      description: editDescription.value,
-    });
-
+    const payload = listingToPayload({ ...car.value, price: Number(editPrice.value || 0), description: editDescription.value });
     const updated = await listingService.update(car.value.id, payload, auth.token);
     const statusUpdated = await listingService.updateStatus(car.value.id, editStatus.value, auth.token);
     car.value = { ...updated, status: statusUpdated.status, images: images.value };
@@ -311,9 +281,7 @@ async function saveOwnerChanges() {
 async function deleteListing() {
   await auth.init();
   if (!auth.token || !car.value) return;
-
-  const confirmed = window.confirm('Delete this listing permanently?');
-  if (!confirmed) return;
+  if (!window.confirm('Delete this listing permanently?')) return;
 
   deletingListing.value = true;
   manageMessage.value = '';
@@ -331,12 +299,10 @@ async function deleteListing() {
 
 async function contactSeller() {
   await auth.init();
-
   if (!auth.token) {
     router.push({ path: '/signin', query: { redirect: route.fullPath } });
     return;
   }
-
   if (!car.value || isOwner.value) return;
 
   contactLoading.value = true;
@@ -350,50 +316,22 @@ async function contactSeller() {
   }
 }
 
-function onSlideChange(swiper: any) {
-  currentSlide.value = swiper.realIndex;
-}
-
-function onSwiperInit(swiper: any) {
-  swiperInstance.value = swiper;
-}
-
+function onSlideChange(swiper: any) { currentSlide.value = swiper.realIndex; }
+function onSwiperInit(swiper: any) { swiperInstance.value = swiper; }
 function goToSlide(index: number) {
   const swiper = swiperInstance.value ?? swiperRef.value?.swiper;
   if (!swiper) return;
   swiper.slideTo(index);
   currentSlide.value = index;
 }
-
 function initSellerMap() {
   if (!mapEl.value || !car.value || sellerMap) return;
-
-  sellerMap = new maplibregl.Map({
-    container: mapEl.value,
-    style: 'https://demotiles.maplibre.org/style.json',
-    center: [-3.7038, 40.4168],
-    zoom: 5,
-    attributionControl: {},
-  });
-
+  sellerMap = new maplibregl.Map({ container: mapEl.value, style: 'https://demotiles.maplibre.org/style.json', center: [-3.7038, 40.4168], zoom: 5, attributionControl: {} });
   new maplibregl.Marker({ color: '#356db7' }).setLngLat([-3.7038, 40.4168]).addTo(sellerMap);
-
-  sellerMap.on('load', () => {
-    sellerMap?.resize();
-  });
-
-  window.setTimeout(() => {
-    sellerMap?.resize();
-  }, 180);
+  sellerMap.on('load', () => sellerMap?.resize());
+  window.setTimeout(() => sellerMap?.resize(), 180);
 }
-
-function destroySellerMap() {
-  if (sellerMap) {
-    sellerMap.remove();
-    sellerMap = null;
-  }
-}
-
+function destroySellerMap() { if (sellerMap) { sellerMap.remove(); sellerMap = null; } }
 async function toggleWish() {
   await auth.init();
   if (!auth.token) {
@@ -402,22 +340,10 @@ async function toggleWish() {
   }
   if (car.value) await wishlist.toggle(String(car.value.id), auth.token);
 }
-
-function scrollToManage() {
-  document.querySelector('.manage-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function statusLabel(status: ListingStatus) {
-  return status.charAt(0) + status.slice(1).toLowerCase();
-}
-
-function formatPrice(n: number) {
-  return Number(n || 0).toLocaleString('es-ES');
-}
-
-function formatKm(n: number) {
-  return Number(n || 0).toLocaleString('es-ES');
-}
+function scrollToManage() { document.querySelector('.manage-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+function statusLabel(status: ListingStatus) { return status.charAt(0) + status.slice(1).toLowerCase(); }
+function formatPrice(n: number) { return Number(n || 0).toLocaleString('es-ES'); }
+function formatKm(n: number) { return Number(n || 0).toLocaleString('es-ES'); }
 </script>
 
 <style scoped>
