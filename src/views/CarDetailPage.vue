@@ -53,39 +53,15 @@
             </div>
             <span class="owner-pill">Owner</span>
           </div>
-
           <div class="status-grid">
-            <button
-              v-for="status in statusOptions"
-              :key="status"
-              type="button"
-              class="status-btn"
-              :class="{ active: editStatus === status }"
-              @click="editStatus = status"
-            >
-              {{ statusLabel(status) }}
-            </button>
+            <button v-for="status in statusOptions" :key="status" type="button" class="status-btn" :class="{ active: editStatus === status }" @click="editStatus = status">{{ statusLabel(status) }}</button>
           </div>
-
-          <label class="edit-field">
-            <span>Price</span>
-            <input v-model.number="editPrice" type="number" min="0" />
-          </label>
-
-          <label class="edit-field">
-            <span>Description</span>
-            <textarea v-model="editDescription" rows="4"></textarea>
-          </label>
-
+          <label class="edit-field"><span>Price</span><input v-model.number="editPrice" type="number" min="0" /></label>
+          <label class="edit-field"><span>Description</span><textarea v-model="editDescription" rows="4"></textarea></label>
           <p v-if="manageMessage" class="manage-message" :class="{ error: manageError }">{{ manageMessage }}</p>
-
           <div class="manage-actions">
-            <button class="save-btn" type="button" :disabled="savingListing" @click="saveOwnerChanges">
-              {{ savingListing ? 'Saving...' : 'Save changes' }}
-            </button>
-            <button class="delete-btn" type="button" :disabled="deletingListing" @click="deleteListing">
-              {{ deletingListing ? 'Deleting...' : 'Delete' }}
-            </button>
+            <button class="save-btn" type="button" :disabled="savingListing" @click="saveOwnerChanges">{{ savingListing ? 'Saving...' : 'Save changes' }}</button>
+            <button class="delete-btn" type="button" :disabled="deletingListing" @click="deleteListing">{{ deletingListing ? 'Deleting...' : 'Delete' }}</button>
           </div>
         </div>
 
@@ -124,10 +100,7 @@
             <div class="seller-info">
               <img class="seller-logo" :src="sellerLogo" alt="Seller logo" />
               <div class="seller-text">
-                <strong class="seller-name">
-                  {{ car.userName || car.sellerType || 'Seller' }}
-                  <ion-icon class="verified-icon" :icon="checkmarkCircle" />
-                </strong>
+                <strong class="seller-name">{{ car.userName || car.sellerType || 'Seller' }}<ion-icon class="verified-icon" :icon="checkmarkCircle" /></strong>
                 <p class="seller-type">{{ car.sellerType || 'Private seller' }}</p>
               </div>
               <div class="seller-actions">
@@ -136,7 +109,6 @@
               </div>
             </div>
           </div>
-
           <h3 class="seller-location-title">Seller Location</h3>
           <div ref="mapEl" class="map-container"></div>
         </div>
@@ -144,14 +116,11 @@
     </ion-content>
 
     <ion-footer v-if="car" class="ion-no-border footer">
-      <div class="price-block">
-        <span class="price-label">Price</span>
-        <div class="price">{{ formatPrice(car.price) }} €</div>
+      <div class="price-block"><span class="price-label">Price</span><div class="price">{{ formatPrice(car.price) }} €</div></div>
+      <div v-if="!isOwner" class="buyer-actions">
+        <ion-button class="offer-btn" :disabled="contactLoading" @click="makeOffer">Make offer</ion-button>
+        <ion-button class="buy-btn" :disabled="contactLoading" @click="contactSeller"><ion-spinner v-if="contactLoading" name="crescent" /><span v-else>Contact</span></ion-button>
       </div>
-      <ion-button v-if="!isOwner" class="buy-btn" :disabled="contactLoading" @click="contactSeller">
-        <ion-spinner v-if="contactLoading" name="crescent" />
-        <span v-else>Contact seller</span>
-      </ion-button>
       <ion-button v-else class="buy-btn" @click="scrollToManage">Manage</ion-button>
     </ion-footer>
 
@@ -172,6 +141,7 @@ import { callOutline, chatbubbleOutline, checkmarkCircle, heart, heartOutline } 
 import { useWishlistStore } from '@/stores/wishlist';
 import { useAuthStore } from '@/stores/auth';
 import { chatService } from '@/services/chatService';
+import { createOfferMessage } from '@/services/demoOfferService';
 import { listingService, listingToPayload, normalizeImageUrl, type ListingImageResponse, type ListingResponse, type ListingStatus } from '@/services/listingService';
 import autovalorLogo from '@/assets/logos/autovalor_logo.png';
 
@@ -179,7 +149,6 @@ const route = useRoute();
 const router = useRouter();
 const wishlist = useWishlistStore();
 const auth = useAuthStore();
-
 const car = ref<ListingResponse | null>(null);
 const images = ref<ListingImageResponse[]>([]);
 const loading = ref(false);
@@ -197,7 +166,6 @@ const swiperInstance = ref<any>(null);
 const currentSlide = ref(0);
 const mapEl = ref<HTMLElement | null>(null);
 let sellerMap: MapLibreMap | null = null;
-
 const statusOptions: ListingStatus[] = ['AVAILABLE', 'RESERVED', 'SOLD', 'HIDDEN'];
 const fallbackImage = autovalorLogo;
 const sellerLogo = autovalorLogo;
@@ -211,135 +179,64 @@ const carImages = computed(() => {
 });
 const gallery = computed(() => carImages.value.filter((image) => image !== fallbackImage));
 
-onMounted(async () => {
-  await auth.init();
-  await wishlist.init(auth.token);
-  await loadCar();
-});
-
+onMounted(async () => { await auth.init(); await wishlist.init(auth.token); await loadCar(); });
 onBeforeUnmount(() => destroySellerMap());
 
 async function loadCar() {
-  loading.value = true;
-  errorMessage.value = '';
-  car.value = null;
-  images.value = [];
-  currentSlide.value = 0;
-  destroySellerMap();
-
+  loading.value = true; errorMessage.value = ''; car.value = null; images.value = []; currentSlide.value = 0; destroySellerMap();
   try {
     await auth.init();
     const id = String(route.params.id);
-    const [listing, listingImages] = await Promise.all([
-      listingService.getById(id, auth.token),
-      listingService.getImages(id).catch(() => []),
-    ]);
-
-    car.value = listing;
-    images.value = listingImages;
-    syncEditForm(listing);
-    await nextTick();
-    if (!isOwner.value) initSellerMap();
-  } catch (error: any) {
-    errorMessage.value = error?.message || 'Car not found.';
-  } finally {
-    loading.value = false;
-  }
+    const [listing, listingImages] = await Promise.all([listingService.getById(id, auth.token), listingService.getImages(id).catch(() => [])]);
+    car.value = listing; images.value = listingImages; syncEditForm(listing); await nextTick(); if (!isOwner.value) initSellerMap();
+  } catch (error: any) { errorMessage.value = error?.message || 'Car not found.'; } finally { loading.value = false; }
 }
-
-function syncEditForm(listing: ListingResponse) {
-  editPrice.value = Number(listing.price || 0);
-  editDescription.value = listing.description || '';
-  editStatus.value = listing.status || 'AVAILABLE';
-  manageMessage.value = '';
-  manageError.value = false;
-}
-
+function syncEditForm(listing: ListingResponse) { editPrice.value = Number(listing.price || 0); editDescription.value = listing.description || ''; editStatus.value = listing.status || 'AVAILABLE'; manageMessage.value = ''; manageError.value = false; }
 async function saveOwnerChanges() {
-  await auth.init();
-  if (!auth.token || !car.value) return;
-
-  savingListing.value = true;
-  manageMessage.value = '';
-  manageError.value = false;
-
+  await auth.init(); if (!auth.token || !car.value) return; savingListing.value = true; manageMessage.value = ''; manageError.value = false;
   try {
     const payload = listingToPayload({ ...car.value, price: Number(editPrice.value || 0), description: editDescription.value });
     const updated = await listingService.update(car.value.id, payload, auth.token);
     const statusUpdated = await listingService.updateStatus(car.value.id, editStatus.value, auth.token);
-    car.value = { ...updated, status: statusUpdated.status, images: images.value };
-    syncEditForm(car.value);
-    manageMessage.value = 'Listing updated successfully.';
-  } catch (error: any) {
-    manageError.value = true;
-    manageMessage.value = error?.message || 'Could not update listing.';
-  } finally {
-    savingListing.value = false;
-  }
+    car.value = { ...updated, status: statusUpdated.status, images: images.value }; syncEditForm(car.value); manageMessage.value = 'Listing updated successfully.';
+  } catch (error: any) { manageError.value = true; manageMessage.value = error?.message || 'Could not update listing.'; } finally { savingListing.value = false; }
 }
-
 async function deleteListing() {
-  await auth.init();
-  if (!auth.token || !car.value) return;
-  if (!window.confirm('Delete this listing permanently?')) return;
-
-  deletingListing.value = true;
-  manageMessage.value = '';
-  manageError.value = false;
-  try {
-    await listingService.delete(car.value.id, auth.token);
-    router.replace('/profile/listings');
-  } catch (error: any) {
-    manageError.value = true;
-    manageMessage.value = error?.message || 'Could not delete listing.';
-  } finally {
-    deletingListing.value = false;
-  }
+  await auth.init(); if (!auth.token || !car.value) return; if (!window.confirm('Delete this listing permanently?')) return;
+  deletingListing.value = true; manageMessage.value = ''; manageError.value = false;
+  try { await listingService.delete(car.value.id, auth.token); router.replace('/profile/listings'); } catch (error: any) { manageError.value = true; manageMessage.value = error?.message || 'Could not delete listing.'; } finally { deletingListing.value = false; }
 }
-
-async function contactSeller() {
+async function ensureConversation() {
   await auth.init();
-  if (!auth.token) {
-    router.push({ path: '/signin', query: { redirect: route.fullPath } });
-    return;
-  }
-  if (!car.value || isOwner.value) return;
-
+  if (!auth.token) { router.push({ path: '/signin', query: { redirect: route.fullPath } }); return null; }
+  if (!car.value || isOwner.value) return null;
+  return chatService.startForListing(car.value.id, auth.token);
+}
+async function contactSeller() {
+  contactLoading.value = true;
+  try { const conversation = await ensureConversation(); if (conversation) router.push(`/chat/${conversation.id}`); } catch (error: any) { errorMessage.value = error?.message || 'Could not start the conversation.'; } finally { contactLoading.value = false; }
+}
+async function makeOffer() {
+  if (!car.value) return;
+  const raw = window.prompt('How much do you want to offer?', String(Math.round(Number(car.value.price || 0) * 0.95)));
+  if (!raw) return;
+  const amount = Number(raw.replace(/[^0-9.]/g, ''));
+  if (!Number.isFinite(amount) || amount <= 0) return;
   contactLoading.value = true;
   try {
-    const conversation = await chatService.startForListing(car.value.id, auth.token);
+    const conversation = await ensureConversation();
+    if (!conversation || !auth.token || !car.value) return;
+    const content = createOfferMessage({ offerId: `offer-${Date.now()}`, listingId: car.value.id, listingTitle: car.value.title || `${car.value.brand} ${car.value.model}`, amount, buyerId: auth.user?.id, buyerName: auth.user?.name });
+    await chatService.sendMessage(conversation.id, content, auth.token);
     router.push(`/chat/${conversation.id}`);
-  } catch (error: any) {
-    errorMessage.value = error?.message || 'Could not start the conversation.';
-  } finally {
-    contactLoading.value = false;
-  }
+  } catch (error: any) { errorMessage.value = error?.message || 'Could not send the offer.'; } finally { contactLoading.value = false; }
 }
-
 function onSlideChange(swiper: any) { currentSlide.value = swiper.realIndex; }
 function onSwiperInit(swiper: any) { swiperInstance.value = swiper; }
-function goToSlide(index: number) {
-  const swiper = swiperInstance.value ?? swiperRef.value?.swiper;
-  if (!swiper) return;
-  swiper.slideTo(index);
-  currentSlide.value = index;
-}
-function initSellerMap() {
-  if (!mapEl.value || !car.value || sellerMap) return;
-  sellerMap = new maplibregl.Map({ container: mapEl.value, style: 'https://demotiles.maplibre.org/style.json', center: [-3.7038, 40.4168], zoom: 5, attributionControl: {} });
-  new maplibregl.Marker({ color: '#356db7' }).setLngLat([-3.7038, 40.4168]).addTo(sellerMap);
-  sellerMap.on('load', () => sellerMap?.resize());
-  window.setTimeout(() => sellerMap?.resize(), 180);
-}
+function goToSlide(index: number) { const swiper = swiperInstance.value ?? swiperRef.value?.swiper; if (!swiper) return; swiper.slideTo(index); currentSlide.value = index; }
+function initSellerMap() { if (!mapEl.value || !car.value || sellerMap) return; sellerMap = new maplibregl.Map({ container: mapEl.value, style: 'https://demotiles.maplibre.org/style.json', center: [-3.7038, 40.4168], zoom: 5, attributionControl: {} }); new maplibregl.Marker({ color: '#356db7' }).setLngLat([-3.7038, 40.4168]).addTo(sellerMap); sellerMap.on('load', () => sellerMap?.resize()); window.setTimeout(() => sellerMap?.resize(), 180); }
 function destroySellerMap() { if (sellerMap) { sellerMap.remove(); sellerMap = null; } }
-async function toggleWish() {
-  await auth.init();
-  if (!auth.token) {
-    router.push({ path: '/signin', query: { redirect: route.fullPath } });
-    return;
-  }
-  if (car.value) await wishlist.toggle(String(car.value.id), auth.token);
-}
+async function toggleWish() { await auth.init(); if (!auth.token) { router.push({ path: '/signin', query: { redirect: route.fullPath } }); return; } if (car.value) await wishlist.toggle(String(car.value.id), auth.token); }
 function scrollToManage() { document.querySelector('.manage-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 function statusLabel(status: ListingStatus) { return status.charAt(0) + status.slice(1).toLowerCase(); }
 function formatPrice(n: number) { return Number(n || 0).toLocaleString('es-ES'); }
@@ -405,12 +302,15 @@ function formatKm(n: number) { return Number(n || 0).toLocaleString('es-ES'); }
 .seller-section { margin-top: 20px; }
 .seller-location-title { margin-top: 16px !important; }
 .map-container { width: 100%; height: 180px; border-radius: 16px; overflow: hidden; margin-top: 4px; border: 1px solid #eee; }
-.footer { display: flex; justify-content: space-between; align-items: center; padding: 12px 18px 20px; background: #fff; border-top: 1px solid #f0f0f0; }
-.price-block { display: flex; flex-direction: column; gap: 2px; }
+.footer { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 18px 20px; background: #fff; border-top: 1px solid #f0f0f0; }
+.price-block { display: flex; flex-direction: column; gap: 2px; min-width: 105px; }
 .price-label { font-size: 12px; color: #9a9ea6; }
-.price { font-size: clamp(28px, 8vw, 40px); line-height: 1; letter-spacing: -0.03em; font-weight: 800; color: #1a1a1a; }
-.buy-btn { --background: #1a1a1a; --border-radius: 999px; --padding-start: 28px; --padding-end: 28px; font-weight: 700; min-height: 46px; }
-@media (max-width: 430px) { .hero { margin-top: 14px; padding: 14px 8px 22px; } .car-img { height: 182px; } .title { font-size: clamp(26px, 9vw, 32px); } .footer { padding: 10px 14px 16px; } .buy-btn { --padding-start: 20px; --padding-end: 20px; min-height: 44px; } }
-@media (max-width: 360px) { .content-section { padding: 8px 14px 0; } .subtitle { gap: 8px; font-size: 12px; } .seller-name { font-size: 13px; } .price { font-size: 26px; } .manage-actions { grid-template-columns: 1fr; } }
+.price { font-size: clamp(25px, 7vw, 34px); line-height: 1; letter-spacing: -0.03em; font-weight: 800; color: #1a1a1a; }
+.buyer-actions { display: flex; align-items: center; gap: 8px; }
+.buy-btn, .offer-btn { --border-radius: 999px; font-weight: 700; min-height: 46px; text-transform: none; }
+.buy-btn { --background: #1a1a1a; --padding-start: 22px; --padding-end: 22px; }
+.offer-btn { --background: #f0f1f3; --color: #111216; --padding-start: 18px; --padding-end: 18px; }
+@media (max-width: 430px) { .hero { margin-top: 14px; padding: 14px 8px 22px; } .car-img { height: 182px; } .title { font-size: clamp(26px, 9vw, 32px); } .footer { padding: 10px 14px 16px; } .buy-btn, .offer-btn { min-height: 44px; --padding-start: 16px; --padding-end: 16px; } }
+@media (max-width: 360px) { .content-section { padding: 8px 14px 0; } .subtitle { gap: 8px; font-size: 12px; } .seller-name { font-size: 13px; } .price { font-size: 24px; } .manage-actions { grid-template-columns: 1fr; } .buyer-actions { gap: 6px; } }
 @media (min-width: 768px) { .hero, .content-section, .footer { max-width: 760px; margin-left: auto; margin-right: auto; } }
 </style>
