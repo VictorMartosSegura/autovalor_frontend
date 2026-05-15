@@ -51,7 +51,7 @@ const methods = [
 ];
 
 function continueToReview() {
-  router.push({ path: '/review-summary', query: { car: String(route.query.car ?? 'bmw-m5'), shipping: String(route.query.shipping ?? 'train'), address: String(route.query.address ?? 'home'), payment: selected.value } });
+  router.push({ path: '/review-summary', query: { ...route.query, payment: selected.value } });
 }
 </script>
 
@@ -65,23 +65,6 @@ function continueToReview() {
 strong { font-size: 15px; color: #202127; }
 .footer { padding: 12px var(--app-page-gutter) 20px; }
 .primary { --background: #07080d; --border-radius: 999px; height: 52px; text-transform: none; font-weight: 600; }
-
-@media (max-width: 360px) {
-  .row {
-    padding: 14px;
-  }
-
-  strong {
-    font-size: 14px;
-  }
-}
-
-@media (min-width: 768px) {
-  .wrap,
-  .footer {
-    max-width: 760px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-}
+@media (max-width: 360px) { .row { padding: 14px; } strong { font-size: 14px; } }
+@media (min-width: 768px) { .wrap, .footer { max-width: 760px; margin-left: auto; margin-right: auto; } }
 </style>
