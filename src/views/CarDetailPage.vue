@@ -110,6 +110,7 @@
             </div>
           </div>
           <h3 class="seller-location-title">Seller Location</h3>
+          <p class="seller-location-text">{{ sellerLocationText }}</p>
           <div ref="mapEl" class="map-container"></div>
         </div>
       </div>
@@ -165,11 +166,17 @@ const swiperInstance = ref<any>(null);
 const currentSlide = ref(0);
 const mapEl = ref<HTMLElement | null>(null);
 let sellerMap: MapLibreMap | null = null;
+let sellerMarker: maplibregl.Marker | null = null;
 const statusOptions: ListingStatus[] = ['AVAILABLE', 'RESERVED', 'SOLD', 'HIDDEN'];
 const fallbackImage = autovalorLogo;
 const sellerLogo = autovalorLogo;
 const listed = computed(() => car.value?.createdAt ? dayjs(car.value.createdAt).format('DD MMM YYYY') : dayjs().format('DD MMM YYYY'));
 const isOwner = computed(() => Boolean(auth.user?.id && car.value?.userId && Number(auth.user.id) === Number(car.value.userId)));
+const sellerLocationText = computed(() => {
+  if (!car.value) return 'Seller location not available yet';
+  const values = [car.value.sellerAddressLine, car.value.sellerAddressCity, car.value.sellerAddressCountry].filter(Boolean);
+  return values.length ? values.join(', ') : 'Seller location not available yet';
+});
 const carImages = computed(() => {
   const detailImages = car.value?.images || [];
   const allImages = images.value.length ? images.value : detailImages;
@@ -177,6 +184,22 @@ const carImages = computed(() => {
   return urls.length ? urls : [fallbackImage];
 });
 const gallery = computed(() => carImages.value.filter((image) => image !== fallbackImage));
+
+const cityCoords: Record<string, [number, number]> = {
+  barcelona: [2.1734, 41.3851],
+  madrid: [-3.7038, 40.4168],
+  valencia: [-0.3763, 39.4699],
+  sevilla: [-5.9845, 37.3891],
+  zaragoza: [-0.8891, 41.6488],
+  malaga: [-4.4214, 36.7213],
+  murcia: [-1.1307, 37.9922],
+  palma: [2.6502, 39.5696],
+  bilbao: [-2.935, 43.263],
+  alicante: [-0.4907, 38.3452],
+  girona: [2.8214, 41.9794],
+  tarragona: [1.2445, 41.1189],
+  lleida: [0.62, 41.6176],
+};
 
 onMounted(async () => { await auth.init(); await wishlist.init(auth.token); await loadCar(); });
 onBeforeUnmount(() => destroySellerMap());
@@ -227,8 +250,25 @@ async function makeOffer() {
 function onSlideChange(swiper: any) { currentSlide.value = swiper.realIndex; }
 function onSwiperInit(swiper: any) { swiperInstance.value = swiper; }
 function goToSlide(index: number) { const swiper = swiperInstance.value ?? swiperRef.value?.swiper; if (!swiper) return; swiper.slideTo(index); currentSlide.value = index; }
-function initSellerMap() { if (!mapEl.value || !car.value || sellerMap) return; sellerMap = new maplibregl.Map({ container: mapEl.value, style: 'https://demotiles.maplibre.org/style.json', center: [-3.7038, 40.4168], zoom: 5, attributionControl: {} }); new maplibregl.Marker({ color: '#356db7' }).setLngLat([-3.7038, 40.4168]).addTo(sellerMap); sellerMap.on('load', () => sellerMap?.resize()); window.setTimeout(() => sellerMap?.resize(), 180); }
-function destroySellerMap() { if (sellerMap) { sellerMap.remove(); sellerMap = null; } }
+function getSellerCoordinates(): [number, number] {
+  const lon = car.value?.sellerAddressLongitude;
+  const lat = car.value?.sellerAddressLatitude;
+  if (typeof lon === 'number' && typeof lat === 'number') return [lon, lat];
+  const city = (car.value?.sellerAddressCity || '').trim().toLowerCase();
+  return cityCoords[city] || [-3.7038, 40.4168];
+}
+function hasSellerLocation() {
+  return Boolean(car.value?.sellerAddressCity || car.value?.sellerAddressCountry || car.value?.sellerAddressLatitude || car.value?.sellerAddressLongitude);
+}
+function initSellerMap() {
+  if (!mapEl.value || !car.value || sellerMap) return;
+  const coords = getSellerCoordinates();
+  sellerMap = new maplibregl.Map({ container: mapEl.value, style: 'https://demotiles.maplibre.org/style.json', center: coords, zoom: hasSellerLocation() ? 10 : 5, attributionControl: false });
+  sellerMarker = new maplibregl.Marker({ color: '#111216' }).setLngLat(coords).addTo(sellerMap);
+  sellerMap.on('load', () => sellerMap?.resize());
+  window.setTimeout(() => sellerMap?.resize(), 180);
+}
+function destroySellerMap() { if (sellerMarker) { sellerMarker.remove(); sellerMarker = null; } if (sellerMap) { sellerMap.remove(); sellerMap = null; } }
 async function toggleWish() { await auth.init(); if (!auth.token) { router.push({ path: '/signin', query: { redirect: route.fullPath } }); return; } if (car.value) await wishlist.toggle(String(car.value.id), auth.token); }
 function scrollToManage() { document.querySelector('.manage-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 function statusLabel(status: ListingStatus) { return status.charAt(0) + status.slice(1).toLowerCase(); }
@@ -293,8 +333,9 @@ function formatKm(n: number) { return Number(n || 0).toLocaleString('es-ES'); }
 .seller-actions { display: flex; align-items: center; gap: 4px; margin-left: auto; }
 .seller-actions ion-button { --color: #1c2128; --padding-start: 6px; --padding-end: 6px; min-height: 30px; min-width: 30px; margin: 0; }
 .seller-section { margin-top: 20px; }
-.seller-location-title { margin-top: 16px !important; }
-.map-container { width: 100%; height: 180px; border-radius: 16px; overflow: hidden; margin-top: 4px; border: 1px solid #eee; }
+.seller-location-title { margin-top: 16px !important; margin-bottom: 4px !important; }
+.seller-location-text { margin: 0 0 10px; color: #6b7179; font-size: 13px; line-height: 1.35; }
+.map-container { width: 100%; height: 180px; border-radius: 16px; overflow: hidden; margin-top: 4px; border: 1px solid #eee; background: #f2f3f5; }
 .footer { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 18px 20px; background: #fff; border-top: 1px solid #f0f0f0; }
 .price-block { display: flex; flex-direction: column; gap: 2px; min-width: 105px; }
 .price-label { font-size: 12px; color: #9a9ea6; }
