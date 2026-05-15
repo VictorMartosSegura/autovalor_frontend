@@ -15,12 +15,12 @@
 
     <ion-content v-if="loading" class="ion-padding detail-state">
       <ion-spinner name="crescent" />
-      <p>Loading car...</p>
+      <p>{{ prefs.t('loadingCar') }}</p>
     </ion-content>
 
     <ion-content v-else-if="errorMessage" class="ion-padding detail-state">
       <p>{{ errorMessage }}</p>
-      <ion-button size="small" @click="loadCar">Retry</ion-button>
+      <ion-button size="small" @click="loadCar">{{ prefs.t('retry') }}</ion-button>
     </ion-content>
 
     <ion-content v-else-if="car" class="detail-content">
@@ -37,41 +37,41 @@
 
       <div class="content-section">
         <h1 class="title">{{ car.title || `${car.brand} ${car.model}` }}</h1>
-        <p class="listed">Listed on {{ listed }}</p>
+        <p class="listed">{{ prefs.t('listedOn') }} {{ listed }}</p>
         <div class="subtitle">
-          <span v-if="car.status" class="condition-badge">{{ car.status }}</span>
+          <span v-if="car.status" class="condition-badge">{{ statusLabel(car.status) }}</span>
           <span v-if="car.year" class="detail-chip">{{ car.year }}</span>
           <span v-if="car.km !== undefined && car.km !== null" class="detail-chip">{{ formatKm(car.km) }} km</span>
-          <span v-if="car.fuelType" class="detail-chip">{{ car.fuelType }}</span>
+          <span v-if="car.fuelType" class="detail-chip">{{ vehicleOptionLabel(car.fuelType) }}</span>
         </div>
 
         <div v-if="isOwner" class="section manage-section">
           <div class="manage-head">
             <div>
-              <h3>Manage your listing</h3>
-              <p>Update status, price or description.</p>
+              <h3>{{ prefs.t('manageYourListing') }}</h3>
+              <p>{{ prefs.t('manageListingSubtitle') }}</p>
             </div>
-            <span class="owner-pill">Owner</span>
+            <span class="owner-pill">{{ prefs.t('owner') }}</span>
           </div>
           <div class="status-grid">
             <button v-for="status in statusOptions" :key="status" type="button" class="status-btn" :class="{ active: editStatus === status }" @click="editStatus = status">{{ statusLabel(status) }}</button>
           </div>
-          <label class="edit-field"><span>Price</span><input v-model.number="editPrice" type="number" min="0" /></label>
-          <label class="edit-field"><span>Description</span><textarea v-model="editDescription" rows="4"></textarea></label>
+          <label class="edit-field"><span>{{ prefs.t('price') }}</span><input v-model.number="editPrice" type="number" min="0" /></label>
+          <label class="edit-field"><span>{{ prefs.t('description') }}</span><textarea v-model="editDescription" rows="4"></textarea></label>
           <p v-if="manageMessage" class="manage-message" :class="{ error: manageError }">{{ manageMessage }}</p>
           <div class="manage-actions">
-            <button class="save-btn" type="button" :disabled="savingListing" @click="saveOwnerChanges">{{ savingListing ? 'Saving...' : 'Save changes' }}</button>
-            <button class="delete-btn" type="button" :disabled="deletingListing" @click="deleteListing">{{ deletingListing ? 'Deleting...' : 'Delete' }}</button>
+            <button class="save-btn" type="button" :disabled="savingListing" @click="saveOwnerChanges">{{ savingListing ? prefs.t('saving') : prefs.t('saveChanges') }}</button>
+            <button class="delete-btn" type="button" :disabled="deletingListing" @click="deleteListing">{{ deletingListing ? prefs.t('deleting') : prefs.t('delete') }}</button>
           </div>
         </div>
 
         <div class="section">
-          <h3>Description</h3>
-          <p class="description">{{ car.description || 'No description provided.' }}</p>
+          <h3>{{ prefs.t('description') }}</h3>
+          <p class="description">{{ car.description || prefs.t('noDescriptionProvided') }}</p>
         </div>
 
         <div v-if="gallery.length" class="section">
-          <h3>Gallery Photos</h3>
+          <h3>{{ prefs.t('galleryPhotos') }}</h3>
           <div class="gallery">
             <button v-for="(img, i) in gallery" :key="i" type="button" class="gallery-item" :class="{ active: currentSlide === i }" @click="goToSlide(i)">
               <img :src="img" :alt="`${car.brand} gallery ${i + 1}`" />
@@ -80,18 +80,18 @@
         </div>
 
         <div class="section specs-section">
-          <h3>Vehicle details</h3>
+          <h3>{{ prefs.t('vehicleDetails') }}</h3>
           <div class="specs-grid">
-            <div v-if="car.brand" class="spec-item"><span>Brand</span><strong>{{ car.brand }}</strong></div>
-            <div v-if="car.model" class="spec-item"><span>Model</span><strong>{{ car.model }}</strong></div>
-            <div v-if="car.transmission" class="spec-item"><span>Transmission</span><strong>{{ car.transmission }}</strong></div>
-            <div v-if="car.bodyType" class="spec-item"><span>Body</span><strong>{{ car.bodyType }}</strong></div>
-            <div v-if="car.color" class="spec-item"><span>Color</span><strong>{{ car.color }}</strong></div>
-            <div v-if="car.doors" class="spec-item"><span>Doors</span><strong>{{ car.doors }}</strong></div>
-            <div v-if="car.powerCv" class="spec-item"><span>Power</span><strong>{{ car.powerCv }} CV</strong></div>
-            <div v-if="car.engineSize" class="spec-item"><span>Engine</span><strong>{{ car.engineSize }}</strong></div>
-            <div v-if="car.environmentalLabel" class="spec-item"><span>Eco label</span><strong>{{ car.environmentalLabel }}</strong></div>
-            <div v-if="car.province || car.location" class="spec-item"><span>Location</span><strong>{{ [car.location, car.province].filter(Boolean).join(', ') }}</strong></div>
+            <div v-if="car.brand" class="spec-item"><span>{{ prefs.t('brand') }}</span><strong>{{ car.brand }}</strong></div>
+            <div v-if="car.model" class="spec-item"><span>{{ prefs.t('model') }}</span><strong>{{ car.model }}</strong></div>
+            <div v-if="car.transmission" class="spec-item"><span>{{ prefs.t('transmission') }}</span><strong>{{ vehicleOptionLabel(car.transmission) }}</strong></div>
+            <div v-if="car.bodyType" class="spec-item"><span>{{ prefs.t('body') }}</span><strong>{{ vehicleOptionLabel(car.bodyType) }}</strong></div>
+            <div v-if="car.color" class="spec-item"><span>{{ prefs.t('color') }}</span><strong>{{ car.color }}</strong></div>
+            <div v-if="car.doors" class="spec-item"><span>{{ prefs.t('doors') }}</span><strong>{{ car.doors }}</strong></div>
+            <div v-if="car.powerCv" class="spec-item"><span>{{ prefs.t('power') }}</span><strong>{{ car.powerCv }} CV</strong></div>
+            <div v-if="car.engineSize" class="spec-item"><span>{{ prefs.t('engine') }}</span><strong>{{ car.engineSize }}</strong></div>
+            <div v-if="car.environmentalLabel" class="spec-item"><span>{{ prefs.t('ecoLabel') }}</span><strong>{{ car.environmentalLabel }}</strong></div>
+            <div v-if="car.province || car.location" class="spec-item"><span>{{ prefs.t('location') }}</span><strong>{{ [car.location, car.province].filter(Boolean).join(', ') }}</strong></div>
           </div>
         </div>
 
@@ -100,8 +100,8 @@
             <div class="seller-info">
               <img class="seller-logo" :src="sellerLogo" alt="Seller logo" />
               <div class="seller-text">
-                <strong class="seller-name">{{ car.userName || car.sellerType || 'Seller' }}<ion-icon class="verified-icon" :icon="checkmarkCircle" /></strong>
-                <p class="seller-type">{{ car.sellerType || 'Private seller' }}</p>
+                <strong class="seller-name">{{ car.userName || car.sellerType || prefs.t('seller') }}<ion-icon class="verified-icon" :icon="checkmarkCircle" /></strong>
+                <p class="seller-type">{{ car.sellerType || prefs.t('privateSeller') }}</p>
               </div>
               <div class="seller-actions">
                 <ion-button fill="clear" size="small" @click="contactSeller"><ion-icon :icon="chatbubbleOutline" /></ion-button>
@@ -110,7 +110,7 @@
             </div>
           </div>
 
-          <h3 class="seller-location-title">Seller Location</h3>
+          <h3 class="seller-location-title">{{ prefs.t('sellerLocation') }}</h3>
           <p class="seller-location-text">{{ sellerLocationText }}</p>
           <div class="map-frame-wrap">
             <iframe class="map-frame" :src="sellerMapUrl" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
@@ -120,15 +120,15 @@
     </ion-content>
 
     <ion-footer v-if="car" class="ion-no-border footer">
-      <div class="price-block"><span class="price-label">Price</span><div class="price">{{ formatPrice(car.price) }} €</div></div>
+      <div class="price-block"><span class="price-label">{{ prefs.t('price') }}</span><div class="price">{{ formatPrice(car.price) }} €</div></div>
       <div v-if="!isOwner" class="buyer-actions">
-        <ion-button class="offer-btn" :disabled="contactLoading" @click="makeOffer">Make offer</ion-button>
-        <ion-button class="buy-btn" :disabled="contactLoading" @click="contactSeller"><ion-spinner v-if="contactLoading" name="crescent" /><span v-else>Contact</span></ion-button>
+        <ion-button class="offer-btn" :disabled="contactLoading" @click="makeOffer">{{ prefs.t('makeOffer') }}</ion-button>
+        <ion-button class="buy-btn" :disabled="contactLoading" @click="contactSeller"><ion-spinner v-if="contactLoading" name="crescent" /><span v-else>{{ prefs.t('contact') }}</span></ion-button>
       </div>
-      <ion-button v-else class="buy-btn" @click="scrollToManage">Manage</ion-button>
+      <ion-button v-else class="buy-btn" @click="scrollToManage">{{ prefs.t('manage') }}</ion-button>
     </ion-footer>
 
-    <ion-content v-else class="ion-padding detail-state"><p>Car not found</p></ion-content>
+    <ion-content v-else class="ion-padding detail-state"><p>{{ prefs.t('carNotFound') }}</p></ion-content>
   </ion-page>
 </template>
 
@@ -142,6 +142,7 @@ import 'swiper/swiper-bundle.css';
 import { callOutline, chatbubbleOutline, checkmarkCircle, heart, heartOutline } from 'ionicons/icons';
 import { useWishlistStore } from '@/stores/wishlist';
 import { useAuthStore } from '@/stores/auth';
+import { usePreferencesStore } from '@/stores/preferences';
 import { chatService } from '@/services/chatService';
 import { listingService, listingToPayload, normalizeImageUrl, type ListingImageResponse, type ListingResponse, type ListingStatus } from '@/services/listingService';
 import autovalorLogo from '@/assets/logos/autovalor_logo.png';
@@ -150,6 +151,7 @@ const route = useRoute();
 const router = useRouter();
 const wishlist = useWishlistStore();
 const auth = useAuthStore();
+const prefs = usePreferencesStore();
 const car = ref<ListingResponse | null>(null);
 const images = ref<ListingImageResponse[]>([]);
 const loading = ref(false);
@@ -170,27 +172,15 @@ const fallbackImage = autovalorLogo;
 const sellerLogo = autovalorLogo;
 
 const cityCoords: Record<string, [number, number]> = {
-  barcelona: [2.1734, 41.3851],
-  madrid: [-3.7038, 40.4168],
-  valencia: [-0.3763, 39.4699],
-  sevilla: [-5.9845, 37.3891],
-  zaragoza: [-0.8891, 41.6488],
-  malaga: [-4.4214, 36.7213],
-  murcia: [-1.1307, 37.9922],
-  palma: [2.6502, 39.5696],
-  bilbao: [-2.935, 43.263],
-  alicante: [-0.4907, 38.3452],
-  girona: [2.8214, 41.9794],
-  tarragona: [1.2445, 41.1189],
-  lleida: [0.62, 41.6176],
+  barcelona: [2.1734, 41.3851], madrid: [-3.7038, 40.4168], valencia: [-0.3763, 39.4699], sevilla: [-5.9845, 37.3891], zaragoza: [-0.8891, 41.6488], malaga: [-4.4214, 36.7213], murcia: [-1.1307, 37.9922], palma: [2.6502, 39.5696], bilbao: [-2.935, 43.263], alicante: [-0.4907, 38.3452], girona: [2.8214, 41.9794], tarragona: [1.2445, 41.1189], lleida: [0.62, 41.6176],
 };
 
 const listed = computed(() => car.value?.createdAt ? dayjs(car.value.createdAt).format('DD MMM YYYY') : dayjs().format('DD MMM YYYY'));
 const isOwner = computed(() => Boolean(auth.user?.id && car.value?.userId && Number(auth.user.id) === Number(car.value.userId)));
 const sellerLocationText = computed(() => {
-  if (!car.value) return 'Seller location not available yet';
+  if (!car.value) return prefs.t('sellerLocationUnavailable');
   const values = [car.value.sellerAddressLine, car.value.sellerAddressCity, car.value.sellerAddressCountry].filter(Boolean);
-  return values.length ? values.join(', ') : 'Seller location not available yet';
+  return values.length ? values.join(', ') : prefs.t('sellerLocationUnavailable');
 });
 const sellerCoords = computed<[number, number]>(() => {
   const lon = car.value?.sellerAddressLongitude;
@@ -216,6 +206,7 @@ const gallery = computed(() => carImages.value.filter((image) => image !== fallb
 
 onMounted(async () => {
   await auth.init();
+  prefs.init(auth.user?.id);
   await wishlist.init(auth.token);
   await loadCar();
 });
@@ -237,7 +228,7 @@ async function loadCar() {
     images.value = listingImages;
     syncEditForm(listing);
   } catch (error: any) {
-    errorMessage.value = error?.message || 'Car not found.';
+    errorMessage.value = error?.message || prefs.t('carNotFound');
   } finally {
     loading.value = false;
   }
@@ -263,10 +254,10 @@ async function saveOwnerChanges() {
     const statusUpdated = await listingService.updateStatus(car.value.id, editStatus.value, auth.token);
     car.value = { ...updated, status: statusUpdated.status, images: images.value };
     syncEditForm(car.value);
-    manageMessage.value = 'Listing updated successfully.';
+    manageMessage.value = prefs.t('listingUpdated');
   } catch (error: any) {
     manageError.value = true;
-    manageMessage.value = error?.message || 'Could not update listing.';
+    manageMessage.value = error?.message || prefs.t('couldNotUpdateListing');
   } finally {
     savingListing.value = false;
   }
@@ -275,7 +266,7 @@ async function saveOwnerChanges() {
 async function deleteListing() {
   await auth.init();
   if (!auth.token || !car.value) return;
-  if (!window.confirm('Delete this listing permanently?')) return;
+  if (!window.confirm(prefs.t('deleteListing'))) return;
   deletingListing.value = true;
   manageMessage.value = '';
   manageError.value = false;
@@ -284,7 +275,7 @@ async function deleteListing() {
     router.replace('/profile/listings');
   } catch (error: any) {
     manageError.value = true;
-    manageMessage.value = error?.message || 'Could not delete listing.';
+    manageMessage.value = error?.message || prefs.t('couldNotDeleteListing');
   } finally {
     deletingListing.value = false;
   }
@@ -292,10 +283,7 @@ async function deleteListing() {
 
 async function ensureConversation() {
   await auth.init();
-  if (!auth.token) {
-    router.push({ path: '/signin', query: { redirect: route.fullPath } });
-    return null;
-  }
+  if (!auth.token) { router.push({ path: '/signin', query: { redirect: route.fullPath } }); return null; }
   if (!car.value || isOwner.value) return null;
   return chatService.startForListing(car.value.id, auth.token);
 }
@@ -305,41 +293,36 @@ async function contactSeller() {
   try {
     const conversation = await ensureConversation();
     if (conversation) router.push(`/chat/${conversation.id}`);
-  } catch (error: any) {
-    errorMessage.value = error?.message || 'Could not start the conversation.';
-  } finally {
-    contactLoading.value = false;
-  }
+  } catch (error: any) { errorMessage.value = error?.message || prefs.t('couldNotStartConversation'); }
+  finally { contactLoading.value = false; }
 }
 
 async function makeOffer() {
   await auth.init();
-  if (!auth.token) {
-    router.push({ path: '/signin', query: { redirect: route.fullPath } });
-    return;
-  }
+  if (!auth.token) { router.push({ path: '/signin', query: { redirect: route.fullPath } }); return; }
   if (!car.value || isOwner.value) return;
   router.push(`/offer/${car.value.id}/create`);
 }
 
 function onSlideChange(swiper: any) { currentSlide.value = swiper.realIndex; }
 function onSwiperInit(swiper: any) { swiperInstance.value = swiper; }
-function goToSlide(index: number) {
-  const swiper = swiperInstance.value ?? swiperRef.value?.swiper;
-  if (!swiper) return;
-  swiper.slideTo(index);
-  currentSlide.value = index;
-}
-async function toggleWish() {
-  await auth.init();
-  if (!auth.token) {
-    router.push({ path: '/signin', query: { redirect: route.fullPath } });
-    return;
-  }
-  if (car.value) await wishlist.toggle(String(car.value.id), auth.token);
-}
+function goToSlide(index: number) { const swiper = swiperInstance.value ?? swiperRef.value?.swiper; if (!swiper) return; swiper.slideTo(index); currentSlide.value = index; }
+async function toggleWish() { await auth.init(); if (!auth.token) { router.push({ path: '/signin', query: { redirect: route.fullPath } }); return; } if (car.value) await wishlist.toggle(String(car.value.id), auth.token); }
 function scrollToManage() { document.querySelector('.manage-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-function statusLabel(status: ListingStatus) { return status.charAt(0) + status.slice(1).toLowerCase(); }
+function statusLabel(status: ListingStatus) {
+  const labels = prefs.language === 'es'
+    ? { AVAILABLE: 'Disponible', RESERVED: 'Reservado', SOLD: 'Vendido', HIDDEN: 'Oculto' }
+    : { AVAILABLE: 'Available', RESERVED: 'Reserved', SOLD: 'Sold', HIDDEN: 'Hidden' };
+  return labels[status] || status;
+}
+function vehicleOptionLabel(value?: string | null) {
+  if (!value) return '';
+  const labels: Record<string, Record<string, string>> = {
+    es: { Petrol: 'Gasolina', Diesel: 'Diésel', Hybrid: 'Híbrido', Electric: 'Eléctrico', Manual: 'Manual', Automatic: 'Automático', Sedan: 'Sedán', SUV: 'SUV', Coupe: 'Coupé', Convertible: 'Descapotable', Hatchback: 'Compacto' },
+    en: { Petrol: 'Petrol', Diesel: 'Diesel', Hybrid: 'Hybrid', Electric: 'Electric', Manual: 'Manual', Automatic: 'Automatic', Sedan: 'Sedan', SUV: 'SUV', Coupe: 'Coupe', Convertible: 'Convertible', Hatchback: 'Hatchback' },
+  };
+  return labels[prefs.language]?.[value] || value;
+}
 function formatPrice(n: number) { return Number(n || 0).toLocaleString('es-ES'); }
 function formatKm(n: number) { return Number(n || 0).toLocaleString('es-ES'); }
 </script>
