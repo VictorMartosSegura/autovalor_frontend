@@ -10,25 +10,25 @@
 
     <ion-content class="signup-content">
       <div class="signup-container">
-        <h1 class="signup-title">Create your Account</h1>
+        <h1 class="signup-title">{{ prefs.t('createAccountTitle') }}</h1>
 
         <div class="avatar-wrap">
           <div class="avatar-circle">
             <ion-icon :icon="person" class="avatar-icon" />
           </div>
-          <button type="button" class="avatar-edit-btn" aria-label="Edit profile image">
+          <button type="button" class="avatar-edit-btn" :aria-label="prefs.t('editProfile')">
             <ion-icon :icon="create" />
           </button>
         </div>
 
         <div class="form-block">
           <div class="input-box">
-            <ion-input v-model="fullName" placeholder="Full name" autocomplete="name" />
+            <ion-input v-model="fullName" :placeholder="prefs.t('fullName')" autocomplete="name" />
           </div>
 
           <div class="input-box">
             <ion-icon :icon="mail" class="input-icon" />
-            <ion-input v-model="email" type="email" placeholder="Email" autocomplete="email" />
+            <ion-input v-model="email" type="email" :placeholder="prefs.t('email')" autocomplete="email" />
           </div>
 
           <div class="input-box">
@@ -36,10 +36,10 @@
             <ion-input
               v-model="password"
               :type="showPassword ? 'text' : 'password'"
-              placeholder="Password"
+              :placeholder="prefs.t('password')"
               autocomplete="new-password"
             />
-            <button type="button" class="calendar-trigger" aria-label="Show password" @click="showPassword = !showPassword">
+            <button type="button" class="calendar-trigger" :aria-label="prefs.t('showPassword')" @click="showPassword = !showPassword">
               <ion-icon :icon="showPassword ? eyeOff : eye" class="input-icon" />
             </button>
           </div>
@@ -49,24 +49,24 @@
             <ion-input
               v-model="confirmPassword"
               :type="showPassword ? 'text' : 'password'"
-              placeholder="Confirm password"
+              :placeholder="prefs.t('confirmPassword')"
               autocomplete="new-password"
               @keyup.enter="handleRegister"
             />
           </div>
         </div>
 
-        <p class="helper-text">You can complete your profile later from the profile screen.</p>
+        <p class="helper-text">{{ prefs.t('profileLaterHint') }}</p>
         <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
 
         <ion-button expand="block" class="continue-btn" :disabled="auth.loading" @click="handleRegister">
           <ion-spinner v-if="auth.loading" name="crescent" />
-          <span v-else>Sign up</span>
+          <span v-else>{{ prefs.t('signUp') }}</span>
         </ion-button>
 
         <div class="signin-row">
-          Already have an account?
-          <span class="signin-link" @click="goToSignIn">Sign in</span>
+          {{ prefs.t('alreadyHaveAccount') }}
+          <span class="signin-link" @click="goToSignIn">{{ prefs.t('signIn') }}</span>
         </div>
       </div>
     </ion-content>
@@ -87,13 +87,15 @@ import {
   IonToolbar,
 } from '@ionic/vue';
 import { create, eye, eyeOff, lockClosed, mail, person } from 'ionicons/icons';
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { usePreferencesStore } from '@/stores/preferences';
 
 const router = useRouter();
 const route = useRoute();
 const auth = useAuthStore();
+const prefs = usePreferencesStore();
 
 const fullName = ref('');
 const email = ref('');
@@ -102,21 +104,25 @@ const confirmPassword = ref('');
 const showPassword = ref(false);
 const errorMessage = ref('');
 
+onMounted(() => {
+  prefs.init(auth.user?.id);
+});
+
 async function handleRegister() {
   errorMessage.value = '';
 
   if (!fullName.value.trim() || !email.value.trim() || !password.value) {
-    errorMessage.value = 'Complete your name, email and password.';
+    errorMessage.value = prefs.t('completeRegisterFields');
     return;
   }
 
   if (password.value.length < 8) {
-    errorMessage.value = 'Password must be at least 8 characters.';
+    errorMessage.value = prefs.t('passwordMinLength');
     return;
   }
 
   if (password.value !== confirmPassword.value) {
-    errorMessage.value = 'Passwords do not match.';
+    errorMessage.value = prefs.t('passwordsDoNotMatch');
     return;
   }
 
@@ -130,7 +136,7 @@ async function handleRegister() {
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/tabs/home';
     router.replace(redirect);
   } catch (error: any) {
-    errorMessage.value = error?.message || auth.error || 'Could not create the account.';
+    errorMessage.value = error?.message || auth.error || prefs.t('couldNotCreateAccount');
   }
 }
 
