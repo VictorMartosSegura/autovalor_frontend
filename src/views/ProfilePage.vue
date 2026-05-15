@@ -30,6 +30,7 @@
 
         <div class="menu-list">
           <button class="row" @click="goEdit"><ion-icon :icon="personOutline" /><span>Edit Profile</span><ion-icon :icon="chevronForward" /></button>
+          <button class="row" @click="goListings"><ion-icon :icon="carSportOutline" /><span>Listings</span><ion-icon :icon="chevronForward" /></button>
           <button class="row" @click="comingSoon"><ion-icon :icon="locationOutline" /><span>Address</span><ion-icon :icon="chevronForward" /></button>
           <button class="row" @click="comingSoon"><ion-icon :icon="notificationsOutline" /><span>Notification</span><ion-icon :icon="chevronForward" /></button>
           <button class="row" @click="comingSoon"><ion-icon :icon="cardOutline" /><span>Payment</span><ion-icon :icon="chevronForward" /></button>
@@ -50,6 +51,7 @@
 import { IonPage, IonHeader, IonToolbar, IonContent, IonButton, IonIcon, IonToggle } from '@ionic/vue';
 import {
   cardOutline,
+  carSportOutline,
   chevronForward,
   create,
   documentTextOutline,
@@ -110,6 +112,10 @@ async function toggleDark() {
 
 function goEdit() {
   router.push('/profile/edit');
+}
+
+function goListings() {
+  router.push('/profile/listings');
 }
 
 function comingSoon() {
