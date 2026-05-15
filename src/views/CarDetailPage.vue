@@ -91,7 +91,7 @@
             <div v-if="car.powerCv" class="spec-item"><span>{{ prefs.t('power') }}</span><strong>{{ car.powerCv }} CV</strong></div>
             <div v-if="car.engineSize" class="spec-item"><span>{{ prefs.t('engine') }}</span><strong>{{ car.engineSize }}</strong></div>
             <div v-if="car.environmentalLabel" class="spec-item"><span>{{ prefs.t('ecoLabel') }}</span><strong>{{ car.environmentalLabel }}</strong></div>
-            <div v-if="car.province || car.location" class="spec-item"><span>{{ prefs.t('location') }}</span><strong>{{ [car.location, car.province].filter(Boolean).join(', ') }}</strong></div>
+            <div v-if="car.province || car.location" class="spec-item"><span>{{ prefs.t('locationCity') }}</span><strong>{{ [car.location, car.province].filter(Boolean).join(', ') }}</strong></div>
           </div>
         </div>
 
