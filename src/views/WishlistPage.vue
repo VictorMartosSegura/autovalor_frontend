@@ -7,7 +7,7 @@
             <ion-button fill="clear" size="small" class="back-btn" @click="goBack">
               <ion-icon :icon="arrowBackOutline" />
             </ion-button>
-            <h1>My Wishlist</h1>
+            <h1>{{ prefs.t('myWishlist') }}</h1>
           </div>
           <div class="actions">
             <ion-button fill="clear" size="small" @click="loadFavorites"><ion-icon :icon="heartOutline" /></ion-button>
@@ -20,17 +20,17 @@
     <ion-content class="mobile-safe-content wishlist-content">
       <div v-if="loading" class="empty">
         <ion-spinner name="crescent" />
-        <h3>Loading wishlist...</h3>
+        <h3>{{ prefs.t('loadingWishlist') }}</h3>
       </div>
 
       <div v-else-if="errorMessage" class="empty">
         <h3>{{ errorMessage }}</h3>
-        <ion-button size="small" @click="loadFavorites">Retry</ion-button>
+        <ion-button size="small" @click="loadFavorites">{{ prefs.t('retry') }}</ion-button>
       </div>
 
       <div v-else-if="!wishCars.length" class="empty">
-        <h3>Your wishlist is empty</h3>
-        <p>Add cars from Home to see them here.</p>
+        <h3>{{ prefs.t('wishlistEmpty') }}</h3>
+        <p>{{ prefs.t('addCarsFromHome') }}</p>
       </div>
 
       <draggable
@@ -73,11 +73,13 @@ import { arrowBackOutline, heart, heartOutline, searchOutline, star } from 'ioni
 import { useWishlistStore } from '@/stores/wishlist';
 import { useAuthStore } from '@/stores/auth';
 import { listingService, normalizeImageUrl } from '@/services/listingService';
+import { usePreferencesStore } from '@/stores/preferences';
 import draggable from 'vuedraggable';
 
 const router = useRouter();
 const wishlist = useWishlistStore();
 const auth = useAuthStore();
+const prefs = usePreferencesStore();
 const loading = ref(false);
 const errorMessage = ref('');
 
@@ -89,9 +91,9 @@ const wishCars = computed(() => wishlist.favorites.map((favorite) => {
   return {
     id: listing.id,
     image,
-    name: listing.title || `${listing.brand || ''} ${listing.model || ''}`.trim() || 'Vehicle',
+    name: listing.title || `${listing.brand || ''} ${listing.model || ''}`.trim() || prefs.t('vehicle'),
     year: listing.year,
-    tag: listing.status || listing.fuelType || 'Available',
+    tag: listing.status || listing.fuelType || prefs.t('available'),
     price: listing.price || 0,
   };
 }));
@@ -102,6 +104,7 @@ onMounted(async () => {
 
 async function loadFavorites() {
   await auth.init();
+  prefs.init(auth.user?.id);
 
   if (!auth.token) {
     router.push({ path: '/signin', query: { redirect: '/tabs/wishlist' } });
@@ -117,7 +120,7 @@ async function loadFavorites() {
       favorite.listing.images = images;
     }));
   } catch (error: any) {
-    errorMessage.value = error?.message || 'Could not load wishlist.';
+    errorMessage.value = error?.message || prefs.t('couldNotLoadWishlist');
   } finally {
     loading.value = false;
   }
