@@ -118,6 +118,35 @@ export function normalizeImageUrl(url?: string) {
   return `${apiClient.baseUrl}${url.startsWith('/') ? url : `/${url}`}`;
 }
 
+export function listingToPayload(listing: ListingResponse): CreateListingRequest {
+  return {
+    title: listing.title || `${listing.brand || ''} ${listing.model || ''}`.trim() || 'Vehicle listing',
+    description: listing.description || '',
+    price: Number(listing.price || 0),
+    brand: listing.brand || '',
+    model: listing.model || '',
+    year: Number(listing.year || new Date().getFullYear()),
+    km: Number(listing.km || 0),
+    fuelType: listing.fuelType || '',
+    transmission: listing.transmission || '',
+    location: listing.location || '',
+    province: listing.province || '',
+    sellerType: listing.sellerType || '',
+    bodyType: listing.bodyType || '',
+    doors: listing.doors ?? null,
+    powerCv: listing.powerCv ?? null,
+    engineSize: listing.engineSize || '',
+    environmentalLabel: listing.environmentalLabel || '',
+    warranty: listing.warranty ?? null,
+    color: listing.color || '',
+    registrationMonth: listing.registrationMonth ?? null,
+    registrationYear: listing.registrationYear ?? null,
+    previousOwners: listing.previousOwners ?? null,
+    financeable: listing.financeable ?? null,
+    maintenanceBook: listing.maintenanceBook ?? null,
+  };
+}
+
 export const listingService = {
   list(params: ListingSearchParams = {}) {
     return apiClient.get<ListingPageResponse | ListingResponse[]>(`/api/cars${buildQuery(params)}`);
@@ -127,12 +156,28 @@ export const listingService = {
     return apiClient.get<ListingResponse[]>('/api/cars/all');
   },
 
+  listMine(token: string) {
+    return apiClient.get<ListingResponse[]>('/api/cars/me', { token });
+  },
+
   getById(id: string | number) {
     return apiClient.get<ListingResponse>(`/api/cars/${id}`);
   },
 
   create(payload: CreateListingRequest, token: string) {
     return apiClient.post<ListingResponse>('/api/cars', payload, { token });
+  },
+
+  update(id: string | number, payload: CreateListingRequest, token: string) {
+    return apiClient.put<ListingResponse>(`/api/cars/${id}`, payload, { token });
+  },
+
+  updateStatus(id: string | number, status: ListingStatus, token: string) {
+    return apiClient.patch<ListingResponse>(`/api/cars/${id}/status`, { status }, { token });
+  },
+
+  delete(id: string | number, token: string) {
+    return apiClient.delete<void>(`/api/cars/${id}`, { token });
   },
 
   uploadImage(listingId: string | number, file: File, token: string) {
