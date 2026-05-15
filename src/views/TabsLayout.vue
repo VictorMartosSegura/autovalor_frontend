@@ -62,7 +62,7 @@ import { usePreferencesStore } from '@/stores/preferences';
 const auth = useAuthStore();
 const chat = useChatStore();
 const prefs = usePreferencesStore();
-let unreadInterval: ReturnType<typeof window.setInterval> | null = null;
+let unreadInterval: ReturnType<typeof setInterval> | null = null;
 
 const badgeText = computed(() => chat.unreadTotal > 9 ? '9+' : String(chat.unreadTotal));
 
@@ -71,7 +71,7 @@ onMounted(async () => {
   prefs.init(auth.user?.id);
   await chat.sync(auth.token);
 
-  unreadInterval = window.setInterval(async () => {
+  unreadInterval = setInterval(async () => {
     await auth.init();
     await chat.sync(auth.token);
   }, 10000);
@@ -79,7 +79,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   if (unreadInterval) {
-    window.clearInterval(unreadInterval);
+    clearInterval(unreadInterval);
     unreadInterval = null;
   }
 });
@@ -131,32 +131,10 @@ ion-tab-button ion-icon {
   font-size: 10px;
   line-height: 17px;
   font-weight: 800;
-  text-align: center;
-  box-shadow: 0 2px 5px rgba(17, 18, 22, 0.22);
 }
 
-@media (orientation: landscape) and (max-height: 500px) {
-  .custom-tabbar {
-    padding-top: 2px;
-    padding-bottom: 1px;
-  }
-
-  ion-tab-button {
-    font-size: 9px;
-    min-height: 38px;
-  }
-
-  ion-tab-button ion-icon {
-    font-size: 16px;
-  }
-
-  .tab-badge {
-    top: -4px;
-    right: -4px;
-    min-width: 15px;
-    height: 15px;
-    font-size: 9px;
-    line-height: 15px;
-  }
+ion-label {
+  font-size: 10px;
+  margin-top: 2px;
 }
 </style>
