@@ -13,6 +13,11 @@ function toPlainUser(user: UserResponse | null) {
     email: user.email,
     role: user.role,
     createdAt: user.createdAt,
+    addressCountry: user.addressCountry,
+    addressCity: user.addressCity,
+    addressLine: user.addressLine,
+    addressLatitude: user.addressLatitude,
+    addressLongitude: user.addressLongitude,
   };
 }
 
@@ -97,6 +102,22 @@ export const useAuthStore = defineStore('auth', {
       this.user = await authService.updateMe(payload, this.token);
       await this.persist();
       return this.user;
+    },
+
+    async updateAddress(payload: { country?: string | null; city?: string | null; address?: string | null; latitude?: number | null; longitude?: number | null }) {
+      await this.init();
+      if (!this.token) throw new Error('No active session');
+      const address = await authService.updateAddress(payload, this.token);
+      this.user = {
+        ...(this.user as UserResponse),
+        addressCountry: address.country,
+        addressCity: address.city,
+        addressLine: address.address,
+        addressLatitude: address.latitude,
+        addressLongitude: address.longitude,
+      };
+      await this.persist();
+      return address;
     },
 
     async setSession(response: AuthResponse) {
