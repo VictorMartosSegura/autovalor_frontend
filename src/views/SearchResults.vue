@@ -12,7 +12,7 @@
             <ion-input
               v-model="query"
               class="search-input"
-              placeholder="Search"
+              :placeholder="prefs.t('search')"
               @keydown.enter="applySearch"
             />
             <button type="button" class="filter-btn" @click="showFilters = true">
@@ -23,30 +23,30 @@
         </div>
 
         <div class="result-head">
-          <p class="result-title">Results for "{{ query || filters.brand || 'All cars' }}"</p>
-          <p class="result-count">{{ matchesCount }} found</p>
+          <p class="result-title">{{ prefs.t('resultsFor') }} "{{ query || filters.brand || prefs.t('allCars') }}"</p>
+          <p class="result-count">{{ matchesCount }} {{ prefs.t('found') }}</p>
         </div>
 
         <div v-if="activeFilterLabels.length" class="active-filters">
           <button v-for="label in activeFilterLabels" :key="label.key" type="button" class="filter-chip" @click="clearFilter(label.key)">
             {{ label.text }} ×
           </button>
-          <button type="button" class="clear-filters" @click="resetFilters">Clear</button>
+          <button type="button" class="clear-filters" @click="resetFilters">{{ prefs.t('clear') }}</button>
         </div>
 
         <div v-if="loading" class="state-block">
           <ion-spinner name="crescent" />
-          <p>Loading results...</p>
+          <p>{{ prefs.t('loadingResults') }}</p>
         </div>
 
         <div v-else-if="errorMessage" class="state-block">
           <p>{{ errorMessage }}</p>
-          <ion-button size="small" @click="loadResults">Retry</ion-button>
+          <ion-button size="small" @click="loadResults">{{ prefs.t('retry') }}</ion-button>
         </div>
 
         <div v-else-if="!resultCars.length" class="state-block">
-          <h3>No cars found</h3>
-          <p>Try another search or change filters.</p>
+          <h3>{{ prefs.t('noCarsFound') }}</h3>
+          <p>{{ prefs.t('tryAnotherSearch') }}</p>
         </div>
 
         <div v-else class="results-grid">
@@ -73,56 +73,56 @@
         <section class="filter-sheet">
           <div class="sheet-handle"></div>
           <div class="sheet-head">
-            <h2>Filter cars</h2>
-            <button type="button" @click="showFilters = false">Close</button>
+            <h2>{{ prefs.t('filterCars') }}</h2>
+            <button type="button" @click="showFilters = false">{{ prefs.t('close') }}</button>
           </div>
 
           <div class="filter-group">
-            <label>Brand</label>
+            <label>{{ prefs.t('brand') }}</label>
             <select v-model="draftFilters.brand">
-              <option value="">Any brand</option>
+              <option value="">{{ prefs.t('anyBrand') }}</option>
               <option v-for="brand in brandOptions" :key="brand" :value="brand">{{ brand }}</option>
             </select>
           </div>
 
           <div class="filter-row">
             <div class="filter-group">
-              <label>Min price</label>
+              <label>{{ prefs.t('minPrice') }}</label>
               <input v-model.number="draftFilters.minPrice" type="number" min="0" placeholder="0" />
             </div>
             <div class="filter-group">
-              <label>Max price</label>
+              <label>{{ prefs.t('maxPrice') }}</label>
               <input v-model.number="draftFilters.maxPrice" type="number" min="0" placeholder="300000" />
             </div>
           </div>
 
           <div class="filter-row">
             <div class="filter-group">
-              <label>Min year</label>
+              <label>{{ prefs.t('minYear') }}</label>
               <input v-model.number="draftFilters.minYear" type="number" min="1900" placeholder="2018" />
             </div>
             <div class="filter-group">
-              <label>Max year</label>
+              <label>{{ prefs.t('maxYear') }}</label>
               <input v-model.number="draftFilters.maxYear" type="number" min="1900" placeholder="2026" />
             </div>
           </div>
 
           <div class="filter-row">
             <div class="filter-group">
-              <label>Min km</label>
+              <label>{{ prefs.t('minKm') }}</label>
               <input v-model.number="draftFilters.minKm" type="number" min="0" placeholder="0" />
             </div>
             <div class="filter-group">
-              <label>Max km</label>
+              <label>{{ prefs.t('maxKm') }}</label>
               <input v-model.number="draftFilters.maxKm" type="number" min="0" placeholder="100000" />
             </div>
           </div>
 
           <div class="filter-row">
             <div class="filter-group">
-              <label>Fuel</label>
+              <label>{{ prefs.t('fuel') }}</label>
               <select v-model="draftFilters.fuelType">
-                <option value="">Any fuel</option>
+                <option value="">{{ prefs.t('anyFuel') }}</option>
                 <option value="Petrol">Petrol</option>
                 <option value="Diesel">Diesel</option>
                 <option value="Hybrid">Hybrid</option>
@@ -130,9 +130,9 @@
               </select>
             </div>
             <div class="filter-group">
-              <label>Transmission</label>
+              <label>{{ prefs.t('transmission') }}</label>
               <select v-model="draftFilters.transmission">
-                <option value="">Any</option>
+                <option value="">{{ prefs.t('any') }}</option>
                 <option value="Manual">Manual</option>
                 <option value="Automatic">Automatic</option>
               </select>
@@ -141,9 +141,9 @@
 
           <div class="filter-row">
             <div class="filter-group">
-              <label>Body</label>
+              <label>{{ prefs.t('body') }}</label>
               <select v-model="draftFilters.bodyType">
-                <option value="">Any body</option>
+                <option value="">{{ prefs.t('anyBody') }}</option>
                 <option value="Hatchback">Hatchback</option>
                 <option value="Sedan">Sedan</option>
                 <option value="SUV">SUV</option>
@@ -152,22 +152,22 @@
               </select>
             </div>
             <div class="filter-group">
-              <label>Sort by</label>
+              <label>{{ prefs.t('sortBy') }}</label>
               <select v-model="draftFilters.sort">
-                <option value="newest">Newest</option>
-                <option value="price_asc">Price: low to high</option>
-                <option value="price_desc">Price: high to low</option>
-                <option value="year_desc">Year: newest</option>
-                <option value="year_asc">Year: oldest</option>
-                <option value="km_asc">Km: low to high</option>
-                <option value="km_desc">Km: high to low</option>
+                <option value="newest">{{ prefs.t('newest') }}</option>
+                <option value="price_asc">{{ prefs.t('priceLowHigh') }}</option>
+                <option value="price_desc">{{ prefs.t('priceHighLow') }}</option>
+                <option value="year_desc">{{ prefs.t('yearNewest') }}</option>
+                <option value="year_asc">{{ prefs.t('yearOldest') }}</option>
+                <option value="km_asc">{{ prefs.t('kmLowHigh') }}</option>
+                <option value="km_desc">{{ prefs.t('kmHighLow') }}</option>
               </select>
             </div>
           </div>
 
           <div class="sheet-actions">
-            <button type="button" class="reset-btn" @click="resetDraftFilters">Reset</button>
-            <button type="button" class="apply-btn" @click="applyFilters">Apply filters</button>
+            <button type="button" class="reset-btn" @click="resetDraftFilters">{{ prefs.t('reset') }}</button>
+            <button type="button" class="apply-btn" @click="applyFilters">{{ prefs.t('applyFilters') }}</button>
           </div>
         </section>
       </div>
@@ -182,6 +182,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useWishlistStore } from '@/stores/wishlist';
 import { useAuthStore } from '@/stores/auth';
+import { usePreferencesStore } from '@/stores/preferences';
 import { listingService, normalizeImageUrl, type ListingResponse, type ListingSearchParams } from '@/services/listingService';
 
 type FilterKey = 'brand' | 'minPrice' | 'maxPrice' | 'minYear' | 'maxYear' | 'minKm' | 'maxKm' | 'fuelType' | 'transmission' | 'bodyType' | 'sort';
@@ -191,6 +192,7 @@ const route = useRoute();
 const router = useRouter();
 const wishlist = useWishlistStore();
 const auth = useAuthStore();
+const prefs = usePreferencesStore();
 
 const query = ref(String(route.query.q ?? ''));
 const listings = ref<ListingResponse[]>([]);
@@ -206,6 +208,7 @@ const draftFilters = reactive<FilterState>(emptyFilters());
 
 onMounted(async () => {
   await auth.init();
+  prefs.init(auth.user?.id);
   await wishlist.init(auth.token);
   readFiltersFromRoute();
   showFilters.value = route.query.openFilters === 'true';
@@ -227,9 +230,9 @@ const resultCars = computed(() => listings.value.map((listing) => {
   return {
     id: listing.id,
     image,
-    name: listing.title || `${listing.brand || ''} ${listing.model || ''}`.trim() || 'Vehicle',
+    name: listing.title || `${listing.brand || ''} ${listing.model || ''}`.trim() || prefs.t('vehicle'),
     year: listing.year,
-    tag: listing.status || listing.fuelType || 'Available',
+    tag: listing.status || listing.fuelType || prefs.t('available'),
     price: listing.price || 0,
   };
 }));
@@ -239,12 +242,12 @@ const activeFilterCount = computed(() => activeFilterLabels.value.filter((item) 
 const activeFilterLabels = computed(() => {
   const labels: Array<{ key: FilterKey; text: string }> = [];
   if (filters.brand) labels.push({ key: 'brand', text: String(filters.brand) });
-  if (filters.minPrice) labels.push({ key: 'minPrice', text: `Min ${formatPrice(Number(filters.minPrice))} €` });
-  if (filters.maxPrice) labels.push({ key: 'maxPrice', text: `Max ${formatPrice(Number(filters.maxPrice))} €` });
-  if (filters.minYear) labels.push({ key: 'minYear', text: `From ${filters.minYear}` });
-  if (filters.maxYear) labels.push({ key: 'maxYear', text: `Until ${filters.maxYear}` });
-  if (filters.minKm) labels.push({ key: 'minKm', text: `Min ${formatKm(Number(filters.minKm))} km` });
-  if (filters.maxKm) labels.push({ key: 'maxKm', text: `Max ${formatKm(Number(filters.maxKm))} km` });
+  if (filters.minPrice) labels.push({ key: 'minPrice', text: `${prefs.t('minPrice')} ${formatPrice(Number(filters.minPrice))} €` });
+  if (filters.maxPrice) labels.push({ key: 'maxPrice', text: `${prefs.t('maxPrice')} ${formatPrice(Number(filters.maxPrice))} €` });
+  if (filters.minYear) labels.push({ key: 'minYear', text: `${prefs.t('from')} ${filters.minYear}` });
+  if (filters.maxYear) labels.push({ key: 'maxYear', text: `${prefs.t('until')} ${filters.maxYear}` });
+  if (filters.minKm) labels.push({ key: 'minKm', text: `${prefs.t('minKm')} ${formatKm(Number(filters.minKm))} km` });
+  if (filters.maxKm) labels.push({ key: 'maxKm', text: `${prefs.t('maxKm')} ${formatKm(Number(filters.maxKm))} km` });
   if (filters.fuelType) labels.push({ key: 'fuelType', text: String(filters.fuelType) });
   if (filters.transmission) labels.push({ key: 'transmission', text: String(filters.transmission) });
   if (filters.bodyType) labels.push({ key: 'bodyType', text: String(filters.bodyType) });
@@ -266,7 +269,7 @@ async function loadResults() {
       return { ...listing, images };
     }));
   } catch (error: any) {
-    errorMessage.value = error?.message || 'Could not load search results.';
+    errorMessage.value = error?.message || prefs.t('couldNotLoadSearchResults');
   } finally {
     loading.value = false;
   }
@@ -389,14 +392,14 @@ function formatPrice(n: number) { return Number(n || 0).toLocaleString('es-ES');
 function formatKm(n: number) { return Number(n || 0).toLocaleString('es-ES'); }
 function sortLabel(value: string) {
   const labels: Record<string, string> = {
-    price_asc: 'Cheapest first',
-    price_desc: 'Most expensive',
-    year_desc: 'Newest year',
-    year_asc: 'Oldest year',
-    km_asc: 'Lowest km',
-    km_desc: 'Highest km',
+    price_asc: prefs.t('cheapestFirst'),
+    price_desc: prefs.t('mostExpensive'),
+    year_desc: prefs.t('newestYear'),
+    year_asc: prefs.t('oldestYear'),
+    km_asc: prefs.t('lowestKm'),
+    km_desc: prefs.t('highestKm'),
   };
-  return labels[value] || 'Newest';
+  return labels[value] || prefs.t('newest');
 }
 </script>
 
