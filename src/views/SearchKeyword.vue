@@ -18,7 +18,9 @@
               @keyup.enter="goToResults()"
               @ionInput="onInput"
             />
-            <ion-icon :icon="optionsOutline" class="filter-icon" />
+            <button type="button" class="icon-btn" aria-label="Open filters" @click="goToFilters">
+              <ion-icon :icon="optionsOutline" class="filter-icon" />
+            </button>
           </div>
         </div>
 
@@ -80,11 +82,27 @@ function onInput(event: CustomEvent) {
 
 function goToResults(value?: string) {
   const q = (value ?? query.value).trim();
-  if (!q) return;
-  if (!recentKeywords.value.includes(q)) {
-    recentKeywords.value = [q, ...recentKeywords.value].slice(0, 10);
+  const queryParams: Record<string, string> = {};
+
+  if (q) {
+    queryParams.q = q;
+    if (!recentKeywords.value.includes(q)) {
+      recentKeywords.value = [q, ...recentKeywords.value].slice(0, 10);
+    }
   }
-  router.push({ path: '/search/results', query: { q } });
+
+  router.push({ path: '/search/results', query: queryParams });
+}
+
+function goToFilters() {
+  const q = query.value.trim();
+  const queryParams: Record<string, string> = { openFilters: 'true' };
+
+  if (q) {
+    queryParams.q = q;
+  }
+
+  router.push({ path: '/search/results', query: queryParams });
 }
 </script>
 
@@ -135,6 +153,8 @@ function goToResults(value?: string) {
   display: grid;
   place-items: center;
   padding: 0;
+  width: 24px;
+  height: 24px;
 }
 
 .search-input {
