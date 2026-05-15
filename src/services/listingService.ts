@@ -90,9 +90,13 @@ export type ListingSearchParams = {
   maxPrice?: number;
   minYear?: number;
   maxYear?: number;
+  minKm?: number;
+  maxKm?: number;
   fuelType?: string;
   transmission?: string;
   province?: string;
+  location?: string;
+  sellerType?: string;
   bodyType?: string;
   page?: number;
   size?: number;
