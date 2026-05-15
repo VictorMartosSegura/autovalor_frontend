@@ -31,6 +31,11 @@ export type ListingResponse = {
   status?: ListingStatus;
   userId?: number;
   userName?: string;
+  sellerAddressCountry?: string | null;
+  sellerAddressCity?: string | null;
+  sellerAddressLine?: string | null;
+  sellerAddressLatitude?: number | null;
+  sellerAddressLongitude?: number | null;
   createdAt?: string;
   images?: ListingImageResponse[];
 };
