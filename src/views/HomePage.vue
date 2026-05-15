@@ -16,7 +16,7 @@
       <ion-toolbar class="search-wrap">
         <div class="search-bar" role="button" tabindex="0" @click="goToSearch" @keydown.enter="goToSearch">
           <ion-icon :icon="searchOutline" />
-          <span class="search-label">{{ query || 'Buscar coche' }}</span>
+          <span class="search-label">{{ query || prefs.t('searchCar') }}</span>
           <button class="filter-btn" type="button" @click.stop><ion-icon :icon="optionsOutline" /></button>
         </div>
       </ion-toolbar>
@@ -29,18 +29,18 @@
 
       <div v-if="loading" class="state-block">
         <ion-spinner name="crescent" />
-        <p>Cargando anuncios...</p>
+        <p>{{ prefs.t('loadingListings') }}</p>
       </div>
 
       <div v-else-if="errorMessage" class="state-block">
         <p>{{ errorMessage }}</p>
-        <ion-button size="small" @click="loadListings">Reintentar</ion-button>
+        <ion-button size="small" @click="loadListings">{{ prefs.t('retry') }}</ion-button>
       </div>
 
       <div v-else>
         <section v-if="lastViewed.length">
           <div class="section-header">
-            <span class="section-title">Últimos anuncios</span>
+            <span class="section-title">{{ prefs.t('latestListings') }}</span>
           </div>
           <div class="last-view-row">
             <div v-for="car in lastViewed" :key="car.id" class="product-card last-view-card" @click="goToCar(car.id)">
@@ -62,7 +62,7 @@
 
         <section>
           <div class="section-header">
-            <span class="section-title">Buscar marca</span>
+            <span class="section-title">{{ prefs.t('searchBrand') }}</span>
           </div>
           <div class="brands-grid">
             <button v-for="brand in brands" :key="brand.label" class="brand-item" @click="filterByBrand(brand.query)" type="button">
@@ -76,8 +76,8 @@
 
         <section>
           <div class="section-header">
-            <span class="section-title">Anuncios destacados</span>
-            <span class="see-all" @click="goToSearch">Ver todos</span>
+            <span class="section-title">{{ prefs.t('featuredListings') }}</span>
+            <span class="see-all" @click="goToSearch">{{ prefs.t('seeAll') }}</span>
           </div>
 
           <div v-if="topDeals.length" class="cards-grid">
@@ -98,9 +98,9 @@
           </div>
 
           <div v-else class="empty-block">
-            <h3>No hay anuncios todavía</h3>
-            <p>Crea el primer anuncio desde la pestaña vender.</p>
-            <ion-button size="small" @click="router.push('/tabs/sell')">Crear anuncio</ion-button>
+            <h3>{{ prefs.t('noListingsYet') }}</h3>
+            <p>{{ prefs.t('createFirstListing') }}</p>
+            <ion-button size="small" @click="router.push('/tabs/sell')">{{ prefs.t('createListing') }}</ion-button>
           </div>
         </section>
       </div>
@@ -117,10 +117,12 @@ import { useRouter } from 'vue-router';
 import { listingService, normalizeImageUrl, type ListingResponse } from '@/services/listingService';
 import { useWishlistStore } from '@/stores/wishlist';
 import { useAuthStore } from '@/stores/auth';
+import { usePreferencesStore } from '@/stores/preferences';
 
 const router = useRouter();
 const wishlist = useWishlistStore();
 const auth = useAuthStore();
+const prefs = usePreferencesStore();
 const query = ref('');
 const listings = ref<ListingResponse[]>([]);
 const loading = ref(false);
@@ -130,6 +132,7 @@ const fallbackImage = new URL('../assets/logos/autovalor_logo.png', import.meta.
 
 onMounted(async () => {
   await auth.init();
+  prefs.init(auth.user?.id);
   await wishlist.init(auth.token);
   await loadListings();
 });
@@ -140,7 +143,7 @@ const topDeals = computed(() => cards.value.slice(0, 8));
 
 const brandLogo = (name: string) => new URL(`../assets/logos/${name}`, import.meta.url).href;
 
-const brands = [
+const brands = computed(() => [
   { label: 'Mercedes', query: 'Mercedes', iconImg: brandLogo('mercedes.png') },
   { label: 'Tesla', query: 'Tesla', iconImg: brandLogo('tesla.png') },
   { label: 'BMW', query: 'BMW', iconImg: brandLogo('bmw.png') },
@@ -148,8 +151,8 @@ const brands = [
   { label: 'Volvo', query: 'Volvo', iconImg: brandLogo('volvo.png') },
   { label: 'Bugatti', query: 'Bugatti', iconImg: brandLogo('bugatti.png') },
   { label: 'Honda', query: 'Honda', iconImg: brandLogo('honda.png') },
-  { label: 'Más', query: '', iconImg: brandLogo('more.png') },
-];
+  { label: prefs.t('more'), query: '', iconImg: brandLogo('more.png') },
+]);
 
 async function loadListings() {
   loading.value = true;
@@ -161,7 +164,7 @@ async function loadListings() {
       return { ...listing, images };
     }));
   } catch (error: any) {
-    errorMessage.value = error?.message || 'No se pudieron cargar los anuncios.';
+    errorMessage.value = error?.message || prefs.t('couldNotLoadListings');
   } finally {
     loading.value = false;
   }
@@ -169,6 +172,7 @@ async function loadListings() {
 
 async function refreshListings(event: CustomEvent) {
   await auth.init();
+  prefs.init(auth.user?.id);
   await wishlist.init(auth.token);
   await loadListings();
   (event.target as HTMLIonRefresherElement).complete();
@@ -188,9 +192,9 @@ function toCard(listing: ListingResponse) {
   return {
     id: listing.id,
     image,
-    name: listing.title || `${listing.brand || ''} ${listing.model || ''}`.trim() || 'Vehículo',
+    name: listing.title || `${listing.brand || ''} ${listing.model || ''}`.trim() || prefs.t('vehicle'),
     year: listing.year,
-    tag: listing.status || listing.fuelType || 'Disponible',
+    tag: listing.status || listing.fuelType || prefs.t('available'),
     price: listing.price || 0,
   };
 }
