@@ -91,8 +91,8 @@ const errorMessage = ref('');
 const maintenanceOpen = ref(false);
 const maintenanceMessage = ref('');
 
-const userName = computed(() => auth.user?.name || 'AutoValor User');
-const userEmail = computed(() => auth.user?.email || 'No email available');
+const userName = computed(() => auth.user?.name || prefs.t('autoValorUser'));
+const userEmail = computed(() => auth.user?.email || prefs.t('noEmailAvailable'));
 const initials = computed(() => {
   const parts = userName.value.trim().split(/\s+/).filter(Boolean);
   return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'AV';
@@ -115,7 +115,7 @@ async function refreshProfile() {
     await auth.refreshMe();
     prefs.init(auth.user?.id);
   } catch (error: any) {
-    errorMessage.value = error?.message || 'Could not load your profile.';
+    errorMessage.value = error?.message || prefs.t('couldNotLoadProfile');
   }
 }
 
