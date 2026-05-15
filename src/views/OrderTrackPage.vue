@@ -12,13 +12,18 @@
     </ion-header>
 
     <ion-content class="track-content">
-      <div class="wrap">
+      <div v-if="!order" class="wrap empty">
+        <h3>Order not found</h3>
+        <ion-button size="small" @click="router.replace('/tabs/orders')">Back to Orders</ion-button>
+      </div>
+
+      <div v-else class="wrap">
         <div class="summary-card">
-          <img :src="carImage" alt="BMW M5" />
+          <img :src="order.image || logo" :alt="order.title" />
           <div>
-            <h3>BMW M5 Series</h3>
-            <p><span class="dot"></span> Color</p>
-            <strong>$171,250</strong>
+            <h3>{{ order.title }}</h3>
+            <p><span class="dot"></span> {{ order.color || 'Color' }}</p>
+            <strong>{{ money(order.price) }}</strong>
           </div>
         </div>
 
@@ -30,7 +35,7 @@
             <ion-icon :icon="briefcaseOutline" />
           </div>
           <div class="line"></div>
-          <p>Car Delivery (Train)</p>
+          <p>{{ order.status === 'COMPLETED' ? 'Delivered' : 'Car Delivery (Train)' }}</p>
         </div>
 
         <h4>Order Status Details</h4>
@@ -46,35 +51,87 @@
             </div>
           </div>
         </div>
+
+        <ion-button v-if="order.status === 'ACTIVE'" expand="block" class="delivered-btn" :disabled="finishing" @click="markDelivered">
+          <ion-spinner v-if="finishing" name="crescent" />
+          <span v-else>Order delivered</span>
+        </ion-button>
+
+        <ion-button v-else expand="block" class="review-btn" @click="reviewOpen = true">Leave review</ion-button>
       </div>
+
+      <ion-toast :is-open="toastOpen" :message="toastMessage" :duration="1600" @didDismiss="toastOpen = false" />
+      <ion-toast :is-open="reviewOpen" message="Review saved (simulated)" :duration="1600" @didDismiss="reviewOpen = false" />
     </ion-content>
   </ion-page>
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonContent, IonButtons, IonBackButton, IonTitle, IonButton, IonIcon } from '@ionic/vue';
+import { IonPage, IonHeader, IonToolbar, IonContent, IonButtons, IonBackButton, IonTitle, IonButton, IonIcon, IonSpinner, IonToast } from '@ionic/vue';
 import { briefcaseOutline, busOutline, cubeOutline, heartOutline, peopleOutline, searchOutline } from 'ionicons/icons';
-import bmw from '@/assets/cars/bmw_m5.png';
+import { computed, onMounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import logo from '@/assets/logos/autovalor_logo.png';
+import { useDemoOrdersStore } from '@/stores/demoOrders';
+import { useAuthStore } from '@/stores/auth';
+import { chatService } from '@/services/chatService';
+import { createDeliveredMessage } from '@/services/demoOfferService';
 
-const carImage = bmw;
-const steps = [
-  { title: 'Order .. Delivery (Train) - Dec 17', address: '32 Manchester Ave. Ringgold, GA 30736', time: '15:20 PM' },
-  { title: 'Order ... Customs Port - Dec 16', address: '4 Evergreen Street Lake Zurich, IL 60047', time: '14:40 PM' },
-  { title: 'Orders are ... Train - Dec 15', address: '9177 Hillcrest Street Wheeling, WV 26003', time: '11:30 AM' },
-  { title: 'Order is in Packing - Dec 15', address: '891 Glen Ridge St. Gainesville, VA 20155', time: '10:25 AM' },
-  { title: 'Verified Payments - Dec 15', address: 'Users', time: '10:04 AM' },
-];
+const route = useRoute();
+const router = useRouter();
+const orders = useDemoOrdersStore();
+const auth = useAuthStore();
+const finishing = ref(false);
+const toastOpen = ref(false);
+const reviewOpen = ref(false);
+const toastMessage = ref('');
+
+const order = computed(() => orders.find(String(route.params.id)));
+const steps = computed(() => {
+  const completed = order.value?.status === 'COMPLETED';
+  return [
+    { title: completed ? 'Order delivered - Today' : 'Order .. Delivery (Train) - Today', address: 'Barcelona delivery hub', time: completed ? '18:30' : '15:20' },
+    { title: 'Order ... Customs Port - Yesterday', address: 'AutoValor logistics center', time: '14:40' },
+    { title: 'Orders are ... Train', address: 'Vehicle transport in progress', time: '11:30' },
+    { title: 'Order is in Packing', address: 'Seller prepared the vehicle', time: '10:25' },
+    { title: 'Verified Payments', address: 'Buyer payment verified', time: '10:04' },
+  ];
+});
+
+onMounted(() => {
+  orders.init();
+});
+
+async function markDelivered() {
+  if (!order.value) return;
+  finishing.value = true;
+  try {
+    await auth.init();
+    orders.complete(order.value.id);
+    if (auth.token && order.value.conversationId) {
+      await chatService.sendMessage(order.value.conversationId, createDeliveredMessage(order.value.title), auth.token).catch(() => null);
+    }
+    toastMessage.value = 'Order marked as delivered.';
+    toastOpen.value = true;
+    window.sessionStorage.setItem('orders_default_segment', 'history');
+  } finally {
+    finishing.value = false;
+  }
+}
+
+function money(n: number) {
+  return `${Number(n || 0).toLocaleString('es-ES')} €`;
+}
 </script>
 
 <style scoped>
-.track-toolbar {
-  --background: #fff;
-  padding-top: var(--app-safe-top);
-}
+.track-toolbar { --background: #fff; padding-top: var(--app-safe-top); }
 .track-toolbar ion-title { font-size: 16px; font-weight: 700; color: #1f222a; }
 .track-toolbar ion-button { --color: #1f222a; }
 .track-content { --background: #fff; }
 .wrap { padding: 18px var(--app-page-gutter) 24px; font-family: 'SF Pro Text', 'Segoe UI', Arial, sans-serif; }
+.empty { min-height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: #70737b; }
+.empty h3 { margin: 0; color: #1f222a; }
 .summary-card { background: #f8f8f9; border-radius: 16px; padding: 12px; display: flex; gap: 10px; }
 .summary-card img { width: 82px; height: 58px; object-fit: contain; background: #efeff0; border-radius: 10px; padding: 4px; }
 .summary-card h3 { margin: 0; font-size: 16px; color: #1f222a; }
@@ -88,25 +145,14 @@ const steps = [
 h4 { margin: 18px 0 10px; color: #1f222a; font-size: 15px; }
 .timeline { border-left: 2px dotted #d0d3da; margin-left: 11px; }
 .tl-item { position: relative; padding-left: 18px; margin-bottom: 16px; }
-.tl-dot {
-  position: absolute; left: -11px; top: 2px; width: 14px; height: 14px; border-radius: 50%;
-  background: #fff; border: 3px solid #111216;
-}
+.tl-dot { position: absolute; left: -11px; top: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 3px solid #111216; }
 .tl-title-row { display: flex; justify-content: space-between; gap: 8px; }
 .tl-title-row strong { font-size: 14px; color: #1f222a; }
 .tl-title-row span { font-size: 11px; color: #8b8f97; }
 .tl-body p { margin: 4px 0 0; font-size: 12px; color: #8b8f97; }
-
-@media (max-width: 360px) {
-  .summary-card h3 { font-size: 15px; }
-  .summary-card strong { font-size: 16px; }
-  .tl-title-row strong { font-size: 13px; }
-}
-
-@media (min-width: 768px) {
-  .wrap {
-    max-width: 760px;
-    margin: 0 auto;
-  }
-}
+.delivered-btn, .review-btn { margin-top: 18px; --border-radius: 999px; height: 52px; text-transform: none; font-weight: 700; }
+.delivered-btn { --background: #111216; --color: #fff; }
+.review-btn { --background: #efeff1; --color: #111216; }
+@media (max-width: 360px) { .summary-card h3 { font-size: 15px; } .summary-card strong { font-size: 16px; } .tl-title-row strong { font-size: 13px; } }
+@media (min-width: 768px) { .wrap { max-width: 760px; margin: 0 auto; } }
 </style>
