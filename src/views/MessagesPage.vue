@@ -5,7 +5,7 @@
         <div class="topbar">
           <div class="left">
             <img :src="logo" alt="AutoValor" class="brand-logo" />
-            <h1>Message</h1>
+            <h1>{{ prefs.t('message') }}</h1>
           </div>
           <div class="actions">
             <ion-button fill="clear" size="small" @click="loadConversations"><ion-icon :icon="searchOutline" /></ion-button>
@@ -17,29 +17,29 @@
 
     <ion-content class="mobile-safe-content messages-content">
       <div class="wrap">
-        <div class="tabs-title">Chats</div>
+        <div class="tabs-title">{{ prefs.t('chats') }}</div>
 
         <div v-if="loading" class="state-block">
           <ion-spinner name="crescent" />
-          <p>Loading conversations...</p>
+          <p>{{ prefs.t('loadingConversations') }}</p>
         </div>
 
         <div v-else-if="errorMessage" class="state-block">
           <p>{{ errorMessage }}</p>
-          <ion-button size="small" @click="loadConversations">Retry</ion-button>
+          <ion-button size="small" @click="loadConversations">{{ prefs.t('retry') }}</ion-button>
         </div>
 
         <div v-else-if="!conversations.length" class="state-block">
-          <p>No conversations yet.</p>
-          <small>Contact a seller from a vehicle detail page.</small>
+          <p>{{ prefs.t('noConversationsYet') }}</p>
+          <small>{{ prefs.t('contactSellerFromDetail') }}</small>
         </div>
 
         <div v-else class="chat-list">
           <article v-for="chat in conversations" :key="chat.id" class="chat-item" @click="openChat(chat.id)">
             <ion-avatar><img :src="logo" :alt="chat.otherUserName" /></ion-avatar>
             <div class="info">
-              <strong>{{ chat.otherUserName || 'Seller' }}</strong>
-              <p>{{ chat.lastMessage || chat.listingTitle || 'Conversation started' }}</p>
+              <strong>{{ chat.otherUserName || prefs.t('seller') }}</strong>
+              <p>{{ chat.lastMessage || chat.listingTitle || prefs.t('conversationStarted') }}</p>
             </div>
             <div class="right">
               <span v-if="chat.unreadCount" class="unread">{{ chat.unreadCount }}</span>
@@ -61,10 +61,12 @@ import dayjs from 'dayjs';
 import logo from '@/assets/logos/autovalor_logo.png';
 import { useAuthStore } from '@/stores/auth';
 import { useChatStore } from '@/stores/chat';
+import { usePreferencesStore } from '@/stores/preferences';
 
 const router = useRouter();
 const auth = useAuthStore();
 const chat = useChatStore();
+const prefs = usePreferencesStore();
 const loading = ref(false);
 const errorMessage = ref('');
 const conversations = computed(() => chat.conversations);
@@ -75,6 +77,7 @@ onMounted(async () => {
 
 async function loadConversations() {
   await auth.init();
+  prefs.init(auth.user?.id);
   errorMessage.value = '';
 
   if (!auth.token) {
@@ -86,7 +89,7 @@ async function loadConversations() {
   try {
     await chat.sync(auth.token);
   } catch (error: any) {
-    errorMessage.value = error?.message || 'Could not load conversations.';
+    errorMessage.value = error?.message || prefs.t('couldNotLoadConversations');
   } finally {
     loading.value = false;
   }
@@ -101,7 +104,7 @@ function formatTime(value?: string | null) {
   if (!value) return '';
   const date = dayjs(value);
   if (date.isSame(dayjs(), 'day')) return date.format('HH:mm');
-  if (date.isSame(dayjs().subtract(1, 'day'), 'day')) return 'Yesterday';
+  if (date.isSame(dayjs().subtract(1, 'day'), 'day')) return prefs.t('yesterday');
   return date.format('DD MMM');
 }
 </script>
