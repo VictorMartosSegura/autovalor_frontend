@@ -6,7 +6,7 @@
           <ion-button fill="clear" class="back" @click="goBack">
             <ion-icon :icon="arrowBack" />
           </ion-button>
-          <h1>Edit Profile</h1>
+          <h1>{{ prefs.t('editProfile') }}</h1>
         </div>
       </ion-toolbar>
     </ion-header>
@@ -16,23 +16,23 @@
         <div class="avatar-preview">{{ initials }}</div>
 
         <div class="field">
-          <ion-input v-model="fullName" label="Full name" label-placement="stacked" placeholder="Full name" />
+          <ion-input v-model="fullName" :label="prefs.t('fullName')" label-placement="stacked" :placeholder="prefs.t('fullName')" />
         </div>
 
         <div class="field icon-left">
           <ion-icon :icon="mail" />
-          <ion-input v-model="email" type="email" label="Email" label-placement="stacked" placeholder="Email" />
+          <ion-input v-model="email" type="email" :label="prefs.t('email')" label-placement="stacked" :placeholder="prefs.t('email')" />
         </div>
 
         <div class="field muted-field">
-          <ion-input v-model="role" label="Role" label-placement="stacked" readonly />
+          <ion-input v-model="role" :label="prefs.t('role')" label-placement="stacked" readonly />
         </div>
 
         <div class="field muted-field">
-          <ion-input v-model="createdAt" label="Member since" label-placement="stacked" readonly />
+          <ion-input v-model="createdAt" :label="prefs.t('memberSince')" label-placement="stacked" readonly />
         </div>
 
-        <p class="helper-text">For now AutoValor stores your name and email. More profile fields will be connected later.</p>
+        <p class="helper-text">{{ prefs.t('profileStorageHint') }}</p>
         <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
         <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
       </div>
@@ -41,10 +41,10 @@
     <ion-footer class="ion-no-border footer">
       <ion-button expand="block" class="primary" :disabled="saving" @click="save">
         <ion-spinner v-if="saving" name="crescent" />
-        <span v-else>Update</span>
+        <span v-else>{{ prefs.t('update') }}</span>
       </ion-button>
       <ion-button expand="block" fill="clear" class="logout-btn" :disabled="loggingOut" @click="logout">
-        {{ loggingOut ? 'Logging out...' : 'Logout' }}
+        {{ loggingOut ? prefs.t('loggingOut') : prefs.t('logout') }}
       </ion-button>
     </ion-footer>
   </ion-page>
@@ -57,9 +57,11 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import dayjs from 'dayjs';
 import { useAuthStore } from '@/stores/auth';
+import { usePreferencesStore } from '@/stores/preferences';
 
 const router = useRouter();
 const auth = useAuthStore();
+const prefs = usePreferencesStore();
 
 const fullName = ref('');
 const email = ref('');
@@ -77,6 +79,7 @@ const initials = computed(() => {
 
 onMounted(async () => {
   await auth.init();
+  prefs.init(auth.user?.id);
   await loadProfile();
 });
 
@@ -88,7 +91,7 @@ async function loadProfile() {
     role.value = user?.role || '';
     createdAt.value = user?.createdAt ? dayjs(user.createdAt).format('DD MMM YYYY') : '—';
   } catch (error: any) {
-    errorMessage.value = error?.message || 'Could not load your profile.';
+    errorMessage.value = error?.message || prefs.t('couldNotLoadProfile');
   }
 }
 
@@ -101,12 +104,12 @@ async function save() {
   successMessage.value = '';
 
   if (!fullName.value.trim()) {
-    errorMessage.value = 'Full name is required.';
+    errorMessage.value = prefs.t('fullNameRequired');
     return;
   }
 
   if (!email.value.trim()) {
-    errorMessage.value = 'Email is required.';
+    errorMessage.value = prefs.t('emailRequired');
     return;
   }
 
@@ -116,10 +119,10 @@ async function save() {
       name: fullName.value.trim(),
       email: email.value.trim().toLowerCase(),
     });
-    successMessage.value = 'Profile updated.';
+    successMessage.value = prefs.t('profileUpdated');
     router.replace('/tabs/profile');
   } catch (error: any) {
-    errorMessage.value = error?.message || 'Could not update your profile.';
+    errorMessage.value = error?.message || prefs.t('couldNotUpdateProfile');
   } finally {
     saving.value = false;
   }
