@@ -14,12 +14,12 @@
           <img :src="autovalorLogo" alt="AutoValor logo" class="signin-logo" />
         </div>
 
-        <h1 class="signin-title">Login to your Account</h1>
+        <h1 class="signin-title">{{ prefs.t('loginTitle') }}</h1>
 
         <div class="form-block">
           <div class="input-box">
             <ion-icon :icon="mail" class="input-icon" />
-            <ion-input v-model="email" type="email" placeholder="Email" autocomplete="email" />
+            <ion-input v-model="email" type="email" :placeholder="prefs.t('email')" autocomplete="email" />
           </div>
 
           <div class="input-box">
@@ -27,33 +27,33 @@
             <ion-input
               v-model="password"
               :type="showPassword ? 'text' : 'password'"
-              placeholder="Password"
+              :placeholder="prefs.t('password')"
               autocomplete="current-password"
               @keyup.enter="handleLogin"
             />
-            <button type="button" class="eye-btn" @click="showPassword = !showPassword" aria-label="Toggle password visibility">
+            <button type="button" class="eye-btn" @click="showPassword = !showPassword" :aria-label="prefs.t('togglePasswordVisibility')">
               <ion-icon :icon="showPassword ? eyeOff : eye" class="eye-icon" />
             </button>
           </div>
 
           <label class="remember-row">
             <input v-model="rememberMe" type="checkbox" class="remember-checkbox" />
-            <span>Remember me</span>
+            <span>{{ prefs.t('rememberMe') }}</span>
           </label>
 
           <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
 
           <ion-button expand="block" class="signin-btn" :disabled="auth.loading" @click="handleLogin">
             <ion-spinner v-if="auth.loading" name="crescent" />
-            <span v-else>Sign in</span>
+            <span v-else>{{ prefs.t('signIn') }}</span>
           </ion-button>
 
-          <button type="button" class="forgot-btn" @click="goToForgotPassword">Forgot the password?</button>
+          <button type="button" class="forgot-btn" @click="goToForgotPassword">{{ prefs.t('forgotPassword') }}</button>
         </div>
 
         <div class="divider-row">
           <div class="divider-line"></div>
-          <div class="divider-text">or continue with</div>
+          <div class="divider-text">{{ prefs.t('orContinueWith') }}</div>
           <div class="divider-line"></div>
         </div>
 
@@ -70,8 +70,8 @@
         </div>
 
         <div class="signup-row">
-          Don’t have an account?
-          <span class="signup-link" @click="goToSignUp">Sign up</span>
+          {{ prefs.t('dontHaveAccount') }}
+          <span class="signup-link" @click="goToSignUp">{{ prefs.t('signUp') }}</span>
         </div>
       </div>
     </ion-content>
@@ -92,7 +92,7 @@ import {
   IonToolbar,
 } from '@ionic/vue';
 import { eye, eyeOff, lockClosed, mail } from 'ionicons/icons';
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import appleLogo from '@/assets/logos/apple.png';
@@ -100,10 +100,12 @@ import autovalorLogo from '@/assets/logos/autovalor_logo.png';
 import facebookLogo from '@/assets/logos/facebook.png';
 import googleLogo from '@/assets/logos/google.png';
 import { useAuthStore } from '@/stores/auth';
+import { usePreferencesStore } from '@/stores/preferences';
 
 const router = useRouter();
 const route = useRoute();
 const auth = useAuthStore();
+const prefs = usePreferencesStore();
 
 const email = ref('');
 const password = ref('');
@@ -111,11 +113,15 @@ const rememberMe = ref(false);
 const showPassword = ref(false);
 const errorMessage = ref('');
 
+onMounted(() => {
+  prefs.init(auth.user?.id);
+});
+
 async function handleLogin() {
   errorMessage.value = '';
 
   if (!email.value.trim() || !password.value) {
-    errorMessage.value = 'Enter your email and password.';
+    errorMessage.value = prefs.t('enterEmailPassword');
     return;
   }
 
@@ -128,7 +134,7 @@ async function handleLogin() {
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/tabs/home';
     router.replace(redirect);
   } catch (error: any) {
-    errorMessage.value = error?.message || auth.error || 'Could not sign in.';
+    errorMessage.value = error?.message || auth.error || prefs.t('couldNotSignIn');
   }
 }
 
@@ -141,15 +147,15 @@ function goToSignUp() {
 }
 
 function loginWithFacebook() {
-  errorMessage.value = 'Social login is not connected yet.';
+  errorMessage.value = prefs.t('socialLoginNotConnected');
 }
 
 function loginWithGoogle() {
-  errorMessage.value = 'Social login is not connected yet.';
+  errorMessage.value = prefs.t('socialLoginNotConnected');
 }
 
 function loginWithApple() {
-  errorMessage.value = 'Social login is not connected yet.';
+  errorMessage.value = prefs.t('socialLoginNotConnected');
 }
 </script>
 
@@ -298,66 +304,52 @@ function loginWithApple() {
   --background: #3b3b3f;
   --color: #ffffff;
   --border-radius: 999px;
-  --box-shadow: none;
-  --padding-top: 0;
-  --padding-bottom: 0;
   height: 54px;
-  font-size: 17px;
-  font-weight: 600;
   text-transform: none;
-  letter-spacing: 0;
+  font-weight: 600;
+  font-size: 18px;
 }
 
 .forgot-btn {
-  display: block;
-  margin: 16px auto 0;
   border: 0;
   background: transparent;
   color: #1f222a;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
+  font-weight: 600;
+  margin: 16px auto 0;
+  display: block;
 }
 
 .divider-row {
   width: 100%;
-  margin: 28px 0 22px;
   display: flex;
   align-items: center;
   gap: 12px;
+  margin: 28px 0 18px;
 }
 
 .divider-line {
-  height: 1px;
   flex: 1;
-  background: #ececec;
+  height: 1px;
+  background: #ececee;
 }
 
 .divider-text {
-  color: #555860;
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 1;
-  white-space: nowrap;
+  color: #6f727a;
+  font-size: 13px;
 }
 
 .social-grid {
-  width: 100%;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
+  gap: 12px;
+  width: 100%;
 }
 
 .social-icon-btn {
-  --background: #ffffff;
-  --color: #1f222a;
-  --border-color: #e6e7eb;
-  --border-style: solid;
-  --border-width: 1px;
+  --border-color: #e5e7eb;
   --border-radius: 14px;
-  --box-shadow: none;
-  height: 48px;
-  margin: 0;
+  --background: #ffffff;
+  height: 52px;
 }
 
 .social-logo {
@@ -368,20 +360,14 @@ function loginWithApple() {
 
 .signup-row {
   margin-top: 24px;
-  text-align: center;
-  color: #b0b3b9;
+  color: #7d8088;
   font-size: 14px;
-  font-weight: 400;
 }
 
 .signup-link {
-  margin-left: 8px;
-  color: #1b1d23;
+  color: #1f222a;
   font-weight: 700;
+  margin-left: 5px;
   cursor: pointer;
-}
-
-ion-back-button {
-  --color: #1f222a;
 }
 </style>
