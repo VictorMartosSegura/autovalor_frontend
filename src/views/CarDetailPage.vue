@@ -141,7 +141,6 @@ import { callOutline, chatbubbleOutline, checkmarkCircle, heart, heartOutline } 
 import { useWishlistStore } from '@/stores/wishlist';
 import { useAuthStore } from '@/stores/auth';
 import { chatService } from '@/services/chatService';
-import { createOfferMessage } from '@/services/demoOfferService';
 import { listingService, listingToPayload, normalizeImageUrl, type ListingImageResponse, type ListingResponse, type ListingStatus } from '@/services/listingService';
 import autovalorLogo from '@/assets/logos/autovalor_logo.png';
 
@@ -217,19 +216,13 @@ async function contactSeller() {
   try { const conversation = await ensureConversation(); if (conversation) router.push(`/chat/${conversation.id}`); } catch (error: any) { errorMessage.value = error?.message || 'Could not start the conversation.'; } finally { contactLoading.value = false; }
 }
 async function makeOffer() {
-  if (!car.value) return;
-  const raw = window.prompt('How much do you want to offer?', String(Math.round(Number(car.value.price || 0) * 0.95)));
-  if (!raw) return;
-  const amount = Number(raw.replace(/[^0-9.]/g, ''));
-  if (!Number.isFinite(amount) || amount <= 0) return;
-  contactLoading.value = true;
-  try {
-    const conversation = await ensureConversation();
-    if (!conversation || !auth.token || !car.value) return;
-    const content = createOfferMessage({ offerId: `offer-${Date.now()}`, listingId: car.value.id, listingTitle: car.value.title || `${car.value.brand} ${car.value.model}`, amount, buyerId: auth.user?.id, buyerName: auth.user?.name });
-    await chatService.sendMessage(conversation.id, content, auth.token);
-    router.push(`/chat/${conversation.id}`);
-  } catch (error: any) { errorMessage.value = error?.message || 'Could not send the offer.'; } finally { contactLoading.value = false; }
+  await auth.init();
+  if (!auth.token) {
+    router.push({ path: '/signin', query: { redirect: route.fullPath } });
+    return;
+  }
+  if (!car.value || isOwner.value) return;
+  router.push(`/offer/${car.value.id}/create`);
 }
 function onSlideChange(swiper: any) { currentSlide.value = swiper.realIndex; }
 function onSwiperInit(swiper: any) { swiperInstance.value = swiper; }
