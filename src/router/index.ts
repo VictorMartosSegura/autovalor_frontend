@@ -29,6 +29,7 @@ const routes: Array<RouteRecordRaw> = [
     ],
   },
   { path: '/car/:id', component: () => import('@/views/CarDetailPage.vue') },
+  { path: '/offer/:id/create', component: () => import('@/views/MakeOfferPage.vue'), meta: { requiresAuth: true } },
   { path: '/offer/:id', component: () => import('@/views/OfferPage.vue'), meta: { requiresAuth: true } },
   { path: '/offer/:id/accepted', component: () => import('@/views/OfferAcceptedPage.vue'), meta: { requiresAuth: true } },
   { path: '/chat/:id', component: () => import('@/views/ChatPage.vue'), meta: { requiresAuth: true } },
