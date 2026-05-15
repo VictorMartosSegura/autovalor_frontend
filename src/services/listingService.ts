@@ -160,8 +160,8 @@ export const listingService = {
     return apiClient.get<ListingResponse[]>('/api/cars/me', { token });
   },
 
-  getById(id: string | number) {
-    return apiClient.get<ListingResponse>(`/api/cars/${id}`);
+  getById(id: string | number, token?: string | null) {
+    return apiClient.get<ListingResponse>(`/api/cars/${id}`, token ? { token } : undefined);
   },
 
   create(payload: CreateListingRequest, token: string) {
