@@ -208,6 +208,7 @@ onMounted(async () => {
   await auth.init();
   await wishlist.init(auth.token);
   readFiltersFromRoute();
+  showFilters.value = route.query.openFilters === 'true';
   await loadResults();
 });
 
@@ -216,6 +217,7 @@ watch(
   async () => {
     query.value = String(route.query.q ?? '');
     readFiltersFromRoute();
+    showFilters.value = route.query.openFilters === 'true';
     await loadResults();
   }
 );
@@ -329,10 +331,12 @@ function buildRouteQuery() {
 function readFiltersFromRoute() {
   const next = emptyFilters();
   (Object.keys(next) as FilterKey[]).forEach((key) => {
+    if (key === 'sort') return;
     const value = route.query[key];
     next[key] = Array.isArray(value) ? String(value[0] ?? '') : String(value ?? '');
   });
-  next.sort = next.sort || 'newest';
+  const sortValue = route.query.sort;
+  next.sort = Array.isArray(sortValue) ? String(sortValue[0] ?? 'newest') : String(sortValue ?? 'newest');
   copyFilters(next, filters);
   copyFilters(next, draftFilters);
 }
