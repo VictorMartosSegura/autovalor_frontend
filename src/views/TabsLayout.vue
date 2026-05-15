@@ -6,17 +6,17 @@
       <ion-tab-bar slot="bottom" class="custom-tabbar">
         <ion-tab-button tab="home" href="/tabs/home">
           <ion-icon :icon="home" />
-          <ion-label>Home</ion-label>
+          <ion-label>{{ prefs.t('home') }}</ion-label>
         </ion-tab-button>
 
         <ion-tab-button tab="orders" href="/tabs/orders">
           <ion-icon :icon="receiptOutline" />
-          <ion-label>Orders</ion-label>
+          <ion-label>{{ prefs.t('orders') }}</ion-label>
         </ion-tab-button>
 
         <ion-tab-button tab="sell" href="/tabs/sell">
           <ion-icon :icon="walletOutline" />
-          <ion-label>Sell</ion-label>
+          <ion-label>{{ prefs.t('sell') }}</ion-label>
         </ion-tab-button>
 
         <ion-tab-button tab="messages" href="/tabs/messages" class="messages-tab">
@@ -24,12 +24,12 @@
             <ion-icon :icon="chatbubbleEllipsesOutline" />
             <span v-if="chat.unreadTotal > 0" class="tab-badge">{{ badgeText }}</span>
           </div>
-          <ion-label>Message</ion-label>
+          <ion-label>{{ prefs.t('message') }}</ion-label>
         </ion-tab-button>
 
         <ion-tab-button tab="profile" href="/tabs/profile">
           <ion-icon :icon="personOutline" />
-          <ion-label>Profile</ion-label>
+          <ion-label>{{ prefs.t('profile') }}</ion-label>
         </ion-tab-button>
       </ion-tab-bar>
     </ion-tabs>
@@ -57,15 +57,18 @@ import {
 } from 'ionicons/icons';
 import { useAuthStore } from '@/stores/auth';
 import { useChatStore } from '@/stores/chat';
+import { usePreferencesStore } from '@/stores/preferences';
 
 const auth = useAuthStore();
 const chat = useChatStore();
+const prefs = usePreferencesStore();
 let unreadInterval: ReturnType<typeof window.setInterval> | null = null;
 
 const badgeText = computed(() => chat.unreadTotal > 9 ? '9+' : String(chat.unreadTotal));
 
 onMounted(async () => {
   await auth.init();
+  prefs.init(auth.user?.id);
   await chat.sync(auth.token);
 
   unreadInterval = window.setInterval(async () => {
