@@ -31,24 +31,33 @@
         <div class="menu-list">
           <button class="row" @click="goEdit"><ion-icon :icon="personOutline" /><span>Edit Profile</span><ion-icon :icon="chevronForward" /></button>
           <button class="row" @click="goListings"><ion-icon :icon="carSportOutline" /><span>Listings</span><ion-icon :icon="chevronForward" /></button>
-          <button class="row" @click="comingSoon"><ion-icon :icon="locationOutline" /><span>Address</span><ion-icon :icon="chevronForward" /></button>
-          <button class="row" @click="comingSoon"><ion-icon :icon="notificationsOutline" /><span>Notification</span><ion-icon :icon="chevronForward" /></button>
-          <button class="row" @click="comingSoon"><ion-icon :icon="cardOutline" /><span>Payment</span><ion-icon :icon="chevronForward" /></button>
-          <button class="row" @click="comingSoon"><ion-icon :icon="shieldCheckmarkOutline" /><span>Security</span><ion-icon :icon="chevronForward" /></button>
-          <button class="row" @click="comingSoon"><ion-icon :icon="languageOutline" /><span>Language</span><span class="value">English (US)</span><ion-icon :icon="chevronForward" /></button>
+          <button class="row" @click="comingSoon('Address')"><ion-icon :icon="locationOutline" /><span>Address</span><ion-icon :icon="chevronForward" /></button>
+          <button class="row" @click="comingSoon('Notification')"><ion-icon :icon="notificationsOutline" /><span>Notification</span><ion-icon :icon="chevronForward" /></button>
+          <button class="row" @click="comingSoon('Payment')"><ion-icon :icon="cardOutline" /><span>Payment</span><ion-icon :icon="chevronForward" /></button>
+          <button class="row" @click="comingSoon('Security')"><ion-icon :icon="shieldCheckmarkOutline" /><span>Security</span><ion-icon :icon="chevronForward" /></button>
+          <button class="row" @click="comingSoon('Language')"><ion-icon :icon="languageOutline" /><span>Language</span><span class="value">English (US)</span><ion-icon :icon="chevronForward" /></button>
           <div class="row static"><ion-icon :icon="moonOutline" /><span>Dark Mode</span><ion-toggle v-model="darkMode" @ionChange="toggleDark" /></div>
-          <button class="row" @click="comingSoon"><ion-icon :icon="documentTextOutline" /><span>Privacy Policy</span><ion-icon :icon="chevronForward" /></button>
-          <button class="row" @click="comingSoon"><ion-icon :icon="helpCircleOutline" /><span>Help Center</span><ion-icon :icon="chevronForward" /></button>
-          <button class="row" @click="comingSoon"><ion-icon :icon="peopleOutline" /><span>Invite Friends</span><ion-icon :icon="chevronForward" /></button>
+          <button class="row" @click="comingSoon('Privacy Policy')"><ion-icon :icon="documentTextOutline" /><span>Privacy Policy</span><ion-icon :icon="chevronForward" /></button>
+          <button class="row" @click="comingSoon('Help Center')"><ion-icon :icon="helpCircleOutline" /><span>Help Center</span><ion-icon :icon="chevronForward" /></button>
+          <button class="row" @click="comingSoon('Invite Friends')"><ion-icon :icon="peopleOutline" /><span>Invite Friends</span><ion-icon :icon="chevronForward" /></button>
           <button class="row logout" :disabled="loggingOut" @click="logout"><ion-icon :icon="logOutOutline" /><span>{{ loggingOut ? 'Logging out...' : 'Logout' }}</span></button>
         </div>
       </div>
+
+      <ion-alert
+        :is-open="maintenanceOpen"
+        header="Servicio en mantenimiento"
+        :message="maintenanceMessage"
+        :buttons="['Entendido']"
+        css-class="maintenance-alert"
+        @didDismiss="maintenanceOpen = false"
+      />
     </ion-content>
   </ion-page>
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonContent, IonButton, IonIcon, IonToggle } from '@ionic/vue';
+import { IonPage, IonHeader, IonToolbar, IonContent, IonButton, IonIcon, IonToggle, IonAlert } from '@ionic/vue';
 import {
   cardOutline,
   carSportOutline,
@@ -77,6 +86,8 @@ const auth = useAuthStore();
 const darkMode = ref(false);
 const loggingOut = ref(false);
 const errorMessage = ref('');
+const maintenanceOpen = ref(false);
+const maintenanceMessage = ref('Esta sección estará disponible próximamente. Estamos trabajando para conectarla con AutoValor.');
 const storage = new Storage();
 
 const userName = computed(() => auth.user?.name || 'AutoValor User');
@@ -118,8 +129,10 @@ function goListings() {
   router.push('/profile/listings');
 }
 
-function comingSoon() {
-  errorMessage.value = 'This section is not connected yet.';
+function comingSoon(section = 'This section') {
+  errorMessage.value = '';
+  maintenanceMessage.value = `${section} está en mantenimiento. Esta funcionalidad estará disponible próximamente.`;
+  maintenanceOpen.value = true;
 }
 
 async function logout() {
