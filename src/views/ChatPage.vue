@@ -19,28 +19,28 @@
 
     <ion-content class="chat-content mobile-safe-content">
       <div class="wrap">
-        <div class="day-pill">{{ conversation?.listingTitle || 'Conversation' }}</div>
+        <div class="day-pill">{{ conversation?.listingTitle || prefs.t('conversation') }}</div>
 
-        <div v-if="loading" class="state-block"><ion-spinner name="crescent" /><p>Loading messages...</p></div>
-        <div v-else-if="errorMessage" class="state-block"><p>{{ errorMessage }}</p><ion-button size="small" @click="loadChat">Retry</ion-button></div>
-        <div v-else-if="!messages.length" class="state-block"><p>No messages yet.</p><small>Send the first message about this vehicle.</small></div>
+        <div v-if="loading" class="state-block"><ion-spinner name="crescent" /><p>{{ prefs.t('loadingMessages') }}</p></div>
+        <div v-else-if="errorMessage" class="state-block"><p>{{ errorMessage }}</p><ion-button size="small" @click="loadChat">{{ prefs.t('retry') }}</ion-button></div>
+        <div v-else-if="!messages.length" class="state-block"><p>{{ prefs.t('noMessagesYet') }}</p><small>{{ prefs.t('sendFirstMessage') }}</small></div>
 
         <template v-else>
           <div v-for="message in messages" :key="message.id" class="bubble" :class="message.sentByCurrentUser ? 'right' : 'left'">
             <template v-if="parseOfferMessage(message.content)">
               <div class="offer-card">
                 <div class="offer-top">
-                  <strong>Vehicle offer</strong>
+                  <strong>{{ prefs.t('vehicleOffer') }}</strong>
                   <span :class="['offer-status', getOfferStatus(parseOfferMessage(message.content)!.offerId, messages).toLowerCase()]">
                     {{ getOfferStatus(parseOfferMessage(message.content)!.offerId, messages) }}
                   </span>
                 </div>
-                <p>{{ parseOfferMessage(message.content)!.buyerName || 'Buyer' }} offers</p>
+                <p>{{ prefs.t('buyerOffers', { buyer: parseOfferMessage(message.content)!.buyerName || prefs.t('buyer') }) }}</p>
                 <div class="offer-amount">{{ formatEuro(parseOfferMessage(message.content)!.amount) }}</div>
                 <small>{{ parseOfferMessage(message.content)!.listingTitle }}</small>
                 <div v-if="!message.sentByCurrentUser && getOfferStatus(parseOfferMessage(message.content)!.offerId, messages) === 'PENDING'" class="offer-actions">
-                  <button type="button" class="accept" @click="answerOffer(parseOfferMessage(message.content)!, 'ACCEPTED')">Accept</button>
-                  <button type="button" class="reject" @click="answerOffer(parseOfferMessage(message.content)!, 'REJECTED')">Reject</button>
+                  <button type="button" class="accept" @click="answerOffer(parseOfferMessage(message.content)!, 'ACCEPTED')">{{ prefs.t('accept') }}</button>
+                  <button type="button" class="reject" @click="answerOffer(parseOfferMessage(message.content)!, 'REJECTED')">{{ prefs.t('reject') }}</button>
                 </div>
               </div>
             </template>
@@ -48,28 +48,28 @@
             <template v-else-if="parseOfferStatusMessage(message.content)">
               <div class="offer-card">
                 <div class="offer-top">
-                  <strong>Offer {{ parseOfferStatusMessage(message.content)!.status.toLowerCase() }}</strong>
+                  <strong>{{ parseOfferStatusMessage(message.content)!.status === 'ACCEPTED' ? prefs.t('offerAccepted') : prefs.t('offerRejected') }}</strong>
                   <span :class="['offer-status', parseOfferStatusMessage(message.content)!.status.toLowerCase()]">
                     {{ parseOfferStatusMessage(message.content)!.status }}
                   </span>
                 </div>
                 <p v-if="parseOfferStatusMessage(message.content)!.status === 'ACCEPTED'">
-                  The seller accepted your offer.
+                  {{ prefs.t('sellerAcceptedOffer') }}
                 </p>
                 <p v-else>
-                  The seller rejected your offer.
+                  {{ prefs.t('sellerRejectedOffer') }}
                 </p>
                 <div class="offer-amount" :class="{ crossed: parseOfferStatusMessage(message.content)!.status === 'REJECTED' }">
                   {{ formatEuro(parseOfferStatusMessage(message.content)!.amount) }}
                 </div>
-                <button v-if="parseOfferStatusMessage(message.content)!.status === 'ACCEPTED' && !message.sentByCurrentUser" type="button" class="view-offer" @click="viewAcceptedOffer(parseOfferStatusMessage(message.content)!)">View</button>
+                <button v-if="parseOfferStatusMessage(message.content)!.status === 'ACCEPTED' && !message.sentByCurrentUser" type="button" class="view-offer" @click="viewAcceptedOffer(parseOfferStatusMessage(message.content)!)">{{ prefs.t('view') }}</button>
               </div>
             </template>
 
             <template v-else-if="parseDeliveredMessage(message.content)">
               <div class="offer-card">
-                <div class="offer-top"><strong>Order delivered</strong><span class="offer-status accepted">COMPLETED</span></div>
-                <p>The order has arrived at its destination.</p>
+                <div class="offer-top"><strong>{{ prefs.t('orderDelivered') }}</strong><span class="offer-status accepted">{{ prefs.t('completed') }}</span></div>
+                <p>{{ prefs.t('orderDeliveredText') }}</p>
                 <small>{{ parseDeliveredMessage(message.content)!.listingTitle }}</small>
               </div>
             </template>
@@ -83,7 +83,7 @@
 
     <ion-footer class="ion-no-border composer">
       <div class="composer-wrap">
-        <input v-model="newMessage" type="text" placeholder="Message..." :disabled="sending" @keyup.enter="sendMessage" />
+        <input v-model="newMessage" type="text" :placeholder="prefs.t('messagePlaceholder')" :disabled="sending" @keyup.enter="sendMessage" />
         <ion-button fill="clear" size="small" disabled><ion-icon :icon="imageOutline" /></ion-button>
         <button class="mic-btn" type="button" :disabled="sending || !newMessage.trim()" @click="sendMessage"><ion-spinner v-if="sending" name="crescent" /><ion-icon v-else :icon="sendOutline" /></button>
       </div>
@@ -101,11 +101,13 @@ import logo from '@/assets/logos/autovalor_logo.png';
 import { chatService, type ConversationResponse, type MessageResponse } from '@/services/chatService';
 import { connectChatSocket } from '@/services/chatSocketService';
 import { useAuthStore } from '@/stores/auth';
+import { usePreferencesStore } from '@/stores/preferences';
 import { createOfferStatusMessage, formatEuro, getOfferStatus, parseDeliveredMessage, parseOfferMessage, parseOfferStatusMessage, type DemoOfferPayload, type DemoOfferStatus, type DemoOfferStatusPayload } from '@/services/demoOfferService';
 
 const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
+const prefs = usePreferencesStore();
 const conversation = ref<ConversationResponse | null>(null);
 const messages = ref<MessageResponse[]>([]);
 const newMessage = ref('');
@@ -114,20 +116,20 @@ const sending = ref(false);
 const errorMessage = ref('');
 const socketConnected = ref(false);
 let socket: WebSocket | null = null;
-const chatTitle = computed(() => conversation.value?.otherUserName || 'Chat');
+const chatTitle = computed(() => conversation.value?.otherUserName || prefs.t('chats'));
 
 onMounted(async () => { await loadChat(); });
 onBeforeUnmount(() => disconnectSocket());
 
 async function loadChat() {
-  await auth.init(); errorMessage.value = '';
+  await auth.init(); prefs.init(auth.user?.id); errorMessage.value = '';
   if (!auth.token) { router.push({ path: '/signin', query: { redirect: route.fullPath } }); return; }
   loading.value = true;
   try {
     const id = String(route.params.id);
     const [conversationResponse, messageList] = await Promise.all([chatService.getConversation(id, auth.token), chatService.listMessages(id, auth.token)]);
     conversation.value = conversationResponse; messages.value = messageList; connectSocket(); await scrollToBottom();
-  } catch (error: any) { errorMessage.value = error?.message || 'Could not load the chat.'; } finally { loading.value = false; }
+  } catch (error: any) { errorMessage.value = error?.message || prefs.t('couldNotLoadChat'); } finally { loading.value = false; }
 }
 function connectSocket() {
   if (!auth.token) return; disconnectSocket();
@@ -145,7 +147,7 @@ async function sendMessage() {
   if (!auth.token) { router.push({ path: '/signin', query: { redirect: route.fullPath } }); return; }
   if (!content || sending.value) return;
   sending.value = true; errorMessage.value = '';
-  try { const sent = await chatService.sendMessage(String(route.params.id), content, auth.token); addOrReplaceMessage(sent); newMessage.value = ''; await scrollToBottom(); } catch (error: any) { errorMessage.value = error?.message || 'Could not send the message.'; } finally { sending.value = false; }
+  try { const sent = await chatService.sendMessage(String(route.params.id), content, auth.token); addOrReplaceMessage(sent); newMessage.value = ''; await scrollToBottom(); } catch (error: any) { errorMessage.value = error?.message || prefs.t('couldNotSendMessage'); } finally { sending.value = false; }
 }
 async function answerOffer(offer: DemoOfferPayload, status: DemoOfferStatus) {
   await auth.init();
@@ -156,7 +158,7 @@ async function answerOffer(offer: DemoOfferPayload, status: DemoOfferStatus) {
     const sent = await chatService.sendMessage(String(route.params.id), content, auth.token);
     addOrReplaceMessage(sent);
     await scrollToBottom();
-  } catch (error: any) { errorMessage.value = error?.message || 'Could not answer the offer.'; } finally { sending.value = false; }
+  } catch (error: any) { errorMessage.value = error?.message || prefs.t('couldNotAnswerOffer'); } finally { sending.value = false; }
 }
 function viewAcceptedOffer(status: DemoOfferStatusPayload) {
   router.push({ path: `/offer/${status.listingId}/accepted`, query: { price: String(status.amount), conversationId: String(route.params.id), offerId: status.offerId } });
