@@ -271,22 +271,13 @@ async function request(pathname, options = {}) {
   return data;
 }
 
-async function registerOrLogin(user) {
-  try {
-    await request('/api/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(user),
-    });
-    console.log(`Created user ${user.email}`);
-  } catch (error) {
-    console.log(`User ${user.email} already exists or could not be registered: ${error.message}`);
-  }
-
+async function loginExistingUser(user) {
   const login = await request('/api/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email: user.email, password: user.password }),
   });
 
+  console.log(`Logged in as ${user.email}`);
   return login.token;
 }
 
@@ -316,10 +307,11 @@ async function uploadImage(listingId, imageFileName, token) {
 
 async function main() {
   console.log(`Seeding demo listings into ${apiBaseUrl}`);
+  console.log('Using existing demo users only. This script will not create users.');
 
   for (const item of demoListings) {
     console.log(`\nProcessing ${item.listing.title}...`);
-    const token = await registerOrLogin(item.user);
+    const token = await loginExistingUser(item.user);
     const listing = await createListing(item.listing, token);
     console.log(`Created listing #${listing.id}: ${listing.title || item.listing.title}`);
 
