@@ -109,9 +109,12 @@
               </div>
             </div>
           </div>
+
           <h3 class="seller-location-title">Seller Location</h3>
           <p class="seller-location-text">{{ sellerLocationText }}</p>
-          <div ref="mapEl" class="map-container"></div>
+          <div class="map-frame-wrap">
+            <iframe class="map-frame" :src="sellerMapUrl" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+          </div>
         </div>
       </div>
     </ion-content>
@@ -131,11 +134,9 @@
 
 <script setup lang="ts">
 import { IonBackButton, IonButton, IonButtons, IonContent, IonFooter, IonHeader, IonIcon, IonPage, IonSpinner, IonToolbar } from '@ionic/vue';
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import dayjs from 'dayjs';
 import { useRoute, useRouter } from 'vue-router';
-import maplibregl, { type Map as MapLibreMap } from 'maplibre-gl';
-import 'maplibre-gl/dist/maplibre-gl.css';
 import { Swiper, SwiperSlide } from 'swiper/vue';
 import 'swiper/swiper-bundle.css';
 import { callOutline, chatbubbleOutline, checkmarkCircle, heart, heartOutline } from 'ionicons/icons';
@@ -164,26 +165,9 @@ const editStatus = ref<ListingStatus>('AVAILABLE');
 const swiperRef = ref<any>(null);
 const swiperInstance = ref<any>(null);
 const currentSlide = ref(0);
-const mapEl = ref<HTMLElement | null>(null);
-let sellerMap: MapLibreMap | null = null;
-let sellerMarker: maplibregl.Marker | null = null;
 const statusOptions: ListingStatus[] = ['AVAILABLE', 'RESERVED', 'SOLD', 'HIDDEN'];
 const fallbackImage = autovalorLogo;
 const sellerLogo = autovalorLogo;
-const listed = computed(() => car.value?.createdAt ? dayjs(car.value.createdAt).format('DD MMM YYYY') : dayjs().format('DD MMM YYYY'));
-const isOwner = computed(() => Boolean(auth.user?.id && car.value?.userId && Number(auth.user.id) === Number(car.value.userId)));
-const sellerLocationText = computed(() => {
-  if (!car.value) return 'Seller location not available yet';
-  const values = [car.value.sellerAddressLine, car.value.sellerAddressCity, car.value.sellerAddressCountry].filter(Boolean);
-  return values.length ? values.join(', ') : 'Seller location not available yet';
-});
-const carImages = computed(() => {
-  const detailImages = car.value?.images || [];
-  const allImages = images.value.length ? images.value : detailImages;
-  const urls = allImages.map((image) => normalizeImageUrl(image.url)).filter(Boolean);
-  return urls.length ? urls : [fallbackImage];
-});
-const gallery = computed(() => carImages.value.filter((image) => image !== fallbackImage));
 
 const cityCoords: Record<string, [number, number]> = {
   barcelona: [2.1734, 41.3851],
@@ -201,43 +185,133 @@ const cityCoords: Record<string, [number, number]> = {
   lleida: [0.62, 41.6176],
 };
 
-onMounted(async () => { await auth.init(); await wishlist.init(auth.token); await loadCar(); });
-onBeforeUnmount(() => destroySellerMap());
+const listed = computed(() => car.value?.createdAt ? dayjs(car.value.createdAt).format('DD MMM YYYY') : dayjs().format('DD MMM YYYY'));
+const isOwner = computed(() => Boolean(auth.user?.id && car.value?.userId && Number(auth.user.id) === Number(car.value.userId)));
+const sellerLocationText = computed(() => {
+  if (!car.value) return 'Seller location not available yet';
+  const values = [car.value.sellerAddressLine, car.value.sellerAddressCity, car.value.sellerAddressCountry].filter(Boolean);
+  return values.length ? values.join(', ') : 'Seller location not available yet';
+});
+const sellerCoords = computed<[number, number]>(() => {
+  const lon = car.value?.sellerAddressLongitude;
+  const lat = car.value?.sellerAddressLatitude;
+  if (typeof lon === 'number' && typeof lat === 'number') return [lon, lat];
+  const city = (car.value?.sellerAddressCity || '').trim().toLowerCase();
+  return cityCoords[city] || [-3.7038, 40.4168];
+});
+const sellerMapUrl = computed(() => {
+  const [lon, lat] = sellerCoords.value;
+  const delta = 0.035;
+  const bbox = `${lon - delta},${lat - delta},${lon + delta},${lat + delta}`;
+  const marker = `${lat},${lon}`;
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}&layer=mapnik&marker=${encodeURIComponent(marker)}`;
+});
+const carImages = computed(() => {
+  const detailImages = car.value?.images || [];
+  const allImages = images.value.length ? images.value : detailImages;
+  const urls = allImages.map((image) => normalizeImageUrl(image.url)).filter(Boolean);
+  return urls.length ? urls : [fallbackImage];
+});
+const gallery = computed(() => carImages.value.filter((image) => image !== fallbackImage));
+
+onMounted(async () => {
+  await auth.init();
+  await wishlist.init(auth.token);
+  await loadCar();
+});
 
 async function loadCar() {
-  loading.value = true; errorMessage.value = ''; car.value = null; images.value = []; currentSlide.value = 0; destroySellerMap();
+  loading.value = true;
+  errorMessage.value = '';
+  car.value = null;
+  images.value = [];
+  currentSlide.value = 0;
   try {
     await auth.init();
     const id = String(route.params.id);
-    const [listing, listingImages] = await Promise.all([listingService.getById(id, auth.token), listingService.getImages(id).catch(() => [])]);
-    car.value = listing; images.value = listingImages; syncEditForm(listing); await nextTick(); if (!isOwner.value) initSellerMap();
-  } catch (error: any) { errorMessage.value = error?.message || 'Car not found.'; } finally { loading.value = false; }
+    const [listing, listingImages] = await Promise.all([
+      listingService.getById(id, auth.token),
+      listingService.getImages(id).catch(() => []),
+    ]);
+    car.value = listing;
+    images.value = listingImages;
+    syncEditForm(listing);
+  } catch (error: any) {
+    errorMessage.value = error?.message || 'Car not found.';
+  } finally {
+    loading.value = false;
+  }
 }
-function syncEditForm(listing: ListingResponse) { editPrice.value = Number(listing.price || 0); editDescription.value = listing.description || ''; editStatus.value = listing.status || 'AVAILABLE'; manageMessage.value = ''; manageError.value = false; }
+
+function syncEditForm(listing: ListingResponse) {
+  editPrice.value = Number(listing.price || 0);
+  editDescription.value = listing.description || '';
+  editStatus.value = listing.status || 'AVAILABLE';
+  manageMessage.value = '';
+  manageError.value = false;
+}
+
 async function saveOwnerChanges() {
-  await auth.init(); if (!auth.token || !car.value) return; savingListing.value = true; manageMessage.value = ''; manageError.value = false;
+  await auth.init();
+  if (!auth.token || !car.value) return;
+  savingListing.value = true;
+  manageMessage.value = '';
+  manageError.value = false;
   try {
     const payload = listingToPayload({ ...car.value, price: Number(editPrice.value || 0), description: editDescription.value });
     const updated = await listingService.update(car.value.id, payload, auth.token);
     const statusUpdated = await listingService.updateStatus(car.value.id, editStatus.value, auth.token);
-    car.value = { ...updated, status: statusUpdated.status, images: images.value }; syncEditForm(car.value); manageMessage.value = 'Listing updated successfully.';
-  } catch (error: any) { manageError.value = true; manageMessage.value = error?.message || 'Could not update listing.'; } finally { savingListing.value = false; }
+    car.value = { ...updated, status: statusUpdated.status, images: images.value };
+    syncEditForm(car.value);
+    manageMessage.value = 'Listing updated successfully.';
+  } catch (error: any) {
+    manageError.value = true;
+    manageMessage.value = error?.message || 'Could not update listing.';
+  } finally {
+    savingListing.value = false;
+  }
 }
+
 async function deleteListing() {
-  await auth.init(); if (!auth.token || !car.value) return; if (!window.confirm('Delete this listing permanently?')) return;
-  deletingListing.value = true; manageMessage.value = ''; manageError.value = false;
-  try { await listingService.delete(car.value.id, auth.token); router.replace('/profile/listings'); } catch (error: any) { manageError.value = true; manageMessage.value = error?.message || 'Could not delete listing.'; } finally { deletingListing.value = false; }
+  await auth.init();
+  if (!auth.token || !car.value) return;
+  if (!window.confirm('Delete this listing permanently?')) return;
+  deletingListing.value = true;
+  manageMessage.value = '';
+  manageError.value = false;
+  try {
+    await listingService.delete(car.value.id, auth.token);
+    router.replace('/profile/listings');
+  } catch (error: any) {
+    manageError.value = true;
+    manageMessage.value = error?.message || 'Could not delete listing.';
+  } finally {
+    deletingListing.value = false;
+  }
 }
+
 async function ensureConversation() {
   await auth.init();
-  if (!auth.token) { router.push({ path: '/signin', query: { redirect: route.fullPath } }); return null; }
+  if (!auth.token) {
+    router.push({ path: '/signin', query: { redirect: route.fullPath } });
+    return null;
+  }
   if (!car.value || isOwner.value) return null;
   return chatService.startForListing(car.value.id, auth.token);
 }
+
 async function contactSeller() {
   contactLoading.value = true;
-  try { const conversation = await ensureConversation(); if (conversation) router.push(`/chat/${conversation.id}`); } catch (error: any) { errorMessage.value = error?.message || 'Could not start the conversation.'; } finally { contactLoading.value = false; }
+  try {
+    const conversation = await ensureConversation();
+    if (conversation) router.push(`/chat/${conversation.id}`);
+  } catch (error: any) {
+    errorMessage.value = error?.message || 'Could not start the conversation.';
+  } finally {
+    contactLoading.value = false;
+  }
 }
+
 async function makeOffer() {
   await auth.init();
   if (!auth.token) {
@@ -247,29 +321,23 @@ async function makeOffer() {
   if (!car.value || isOwner.value) return;
   router.push(`/offer/${car.value.id}/create`);
 }
+
 function onSlideChange(swiper: any) { currentSlide.value = swiper.realIndex; }
 function onSwiperInit(swiper: any) { swiperInstance.value = swiper; }
-function goToSlide(index: number) { const swiper = swiperInstance.value ?? swiperRef.value?.swiper; if (!swiper) return; swiper.slideTo(index); currentSlide.value = index; }
-function getSellerCoordinates(): [number, number] {
-  const lon = car.value?.sellerAddressLongitude;
-  const lat = car.value?.sellerAddressLatitude;
-  if (typeof lon === 'number' && typeof lat === 'number') return [lon, lat];
-  const city = (car.value?.sellerAddressCity || '').trim().toLowerCase();
-  return cityCoords[city] || [-3.7038, 40.4168];
+function goToSlide(index: number) {
+  const swiper = swiperInstance.value ?? swiperRef.value?.swiper;
+  if (!swiper) return;
+  swiper.slideTo(index);
+  currentSlide.value = index;
 }
-function hasSellerLocation() {
-  return Boolean(car.value?.sellerAddressCity || car.value?.sellerAddressCountry || car.value?.sellerAddressLatitude || car.value?.sellerAddressLongitude);
+async function toggleWish() {
+  await auth.init();
+  if (!auth.token) {
+    router.push({ path: '/signin', query: { redirect: route.fullPath } });
+    return;
+  }
+  if (car.value) await wishlist.toggle(String(car.value.id), auth.token);
 }
-function initSellerMap() {
-  if (!mapEl.value || !car.value || sellerMap) return;
-  const coords = getSellerCoordinates();
-  sellerMap = new maplibregl.Map({ container: mapEl.value, style: 'https://demotiles.maplibre.org/style.json', center: coords, zoom: hasSellerLocation() ? 10 : 5, attributionControl: false });
-  sellerMarker = new maplibregl.Marker({ color: '#111216' }).setLngLat(coords).addTo(sellerMap);
-  sellerMap.on('load', () => sellerMap?.resize());
-  window.setTimeout(() => sellerMap?.resize(), 180);
-}
-function destroySellerMap() { if (sellerMarker) { sellerMarker.remove(); sellerMarker = null; } if (sellerMap) { sellerMap.remove(); sellerMap = null; } }
-async function toggleWish() { await auth.init(); if (!auth.token) { router.push({ path: '/signin', query: { redirect: route.fullPath } }); return; } if (car.value) await wishlist.toggle(String(car.value.id), auth.token); }
 function scrollToManage() { document.querySelector('.manage-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 function statusLabel(status: ListingStatus) { return status.charAt(0) + status.slice(1).toLowerCase(); }
 function formatPrice(n: number) { return Number(n || 0).toLocaleString('es-ES'); }
@@ -335,7 +403,8 @@ function formatKm(n: number) { return Number(n || 0).toLocaleString('es-ES'); }
 .seller-section { margin-top: 20px; }
 .seller-location-title { margin-top: 16px !important; margin-bottom: 4px !important; }
 .seller-location-text { margin: 0 0 10px; color: #6b7179; font-size: 13px; line-height: 1.35; }
-.map-container { width: 100%; height: 180px; border-radius: 16px; overflow: hidden; margin-top: 4px; border: 1px solid #eee; background: #f2f3f5; }
+.map-frame-wrap { width: 100%; height: 180px; border-radius: 16px; overflow: hidden; margin-top: 4px; border: 1px solid #eee; background: #f2f3f5; }
+.map-frame { width: 100%; height: 100%; border: 0; display: block; }
 .footer { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 18px 20px; background: #fff; border-top: 1px solid #f0f0f0; }
 .price-block { display: flex; flex-direction: column; gap: 2px; min-width: 105px; }
 .price-label { font-size: 12px; color: #9a9ea6; }
