@@ -15,6 +15,8 @@ const routes: Array<RouteRecordRaw> = [
   { path: '/signin', component: () => import('@/views/SignIn.vue') },
   { path: '/profile/edit', component: () => import('@/views/EditProfile.vue'), meta: { requiresAuth: true } },
   { path: '/profile/listings', component: () => import('@/views/MyListingsPage.vue'), meta: { requiresAuth: true } },
+  { path: '/profile/address', component: () => import('@/views/AddressPage.vue'), meta: { requiresAuth: true } },
+  { path: '/profile/language', component: () => import('@/views/LanguagePage.vue'), meta: { requiresAuth: true } },
   {
     path: '/tabs/',
     component: TabsLayout,
