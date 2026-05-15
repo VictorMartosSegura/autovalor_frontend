@@ -8,25 +8,25 @@
           </ion-button>
 
           <div class="search-input-wrap">
-            <button type="button" class="icon-btn" aria-label="Search" @click="goToResults()">
+            <button type="button" class="icon-btn" :aria-label="prefs.t('search')" @click="goToResults()">
               <ion-icon :icon="searchOutline" class="search-icon" />
             </button>
             <ion-input
               v-model="query"
-              placeholder="Search"
+              :placeholder="prefs.t('search')"
               class="search-input"
               @keyup.enter="goToResults()"
               @ionInput="onInput"
             />
-            <button type="button" class="icon-btn" aria-label="Open filters" @click="goToFilters">
+            <button type="button" class="icon-btn" :aria-label="prefs.t('openFilters')" @click="goToFilters">
               <ion-icon :icon="optionsOutline" class="filter-icon" />
             </button>
           </div>
         </div>
 
         <div class="recent-header">
-          <span class="recent-title">Recent</span>
-          <button type="button" class="clear-btn" @click="clearAll">Clear All</button>
+          <span class="recent-title">{{ prefs.t('recent') }}</span>
+          <button type="button" class="clear-btn" @click="clearAll">{{ prefs.t('clearAll') }}</button>
         </div>
 
         <div class="recent-list">
@@ -45,11 +45,13 @@
 <script setup lang="ts">
 import { IonButton, IonContent, IonIcon, IonInput, IonPage } from '@ionic/vue';
 import { arrowBackOutline, closeOutline, optionsOutline, searchOutline } from 'ionicons/icons';
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { usePreferencesStore } from '@/stores/preferences';
 
 const route = useRoute();
 const router = useRouter();
+const prefs = usePreferencesStore();
 
 const query = ref(String(route.query.q ?? ''));
 const recentKeywords = ref([
@@ -62,6 +64,10 @@ const recentKeywords = ref([
   'Mercedes Benz',
   'Toyota',
 ]);
+
+onMounted(() => {
+  prefs.init();
+});
 
 function goBack() {
   router.back();
