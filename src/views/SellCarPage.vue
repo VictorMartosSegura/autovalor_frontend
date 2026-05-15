@@ -124,9 +124,9 @@
           <h3>{{ prefs.t('description') }}</h3>
           <ion-textarea v-model="form.description" :label="prefs.t('description')" label-placement="stacked" fill="outline" auto-grow class="description-area" />
           <div class="toggles">
-            <ion-toggle v-model="form.warranty">{{ prefs.t('warranty') }}</ion-toggle>
-            <ion-toggle v-model="form.financeable">{{ prefs.t('financeable') }}</ion-toggle>
-            <ion-toggle v-model="form.maintenanceBook">{{ prefs.t('serviceBook') }}</ion-toggle>
+            <ion-toggle v-model="warrantyValue">{{ prefs.t('warranty') }}</ion-toggle>
+            <ion-toggle v-model="financeableValue">{{ prefs.t('financeable') }}</ion-toggle>
+            <ion-toggle v-model="maintenanceBookValue">{{ prefs.t('serviceBook') }}</ion-toggle>
           </div>
         </div>
 
@@ -224,6 +224,21 @@ const form = reactive<CreateListingRequest>({
   previousOwners: null,
   financeable: false,
   maintenanceBook: false,
+});
+
+const warrantyValue = computed({
+  get: () => Boolean(form.warranty),
+  set: (value: boolean) => { form.warranty = value; },
+});
+
+const financeableValue = computed({
+  get: () => Boolean(form.financeable),
+  set: (value: boolean) => { form.financeable = value; },
+});
+
+const maintenanceBookValue = computed({
+  get: () => Boolean(form.maintenanceBook),
+  set: (value: boolean) => { form.maintenanceBook = value; },
 });
 
 const uploadedFiles = computed(() => selectedFiles.value.filter((file): file is File => Boolean(file)));
