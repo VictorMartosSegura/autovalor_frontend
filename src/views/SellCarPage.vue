@@ -7,6 +7,7 @@
             <ion-icon :icon="arrowBack" />
           </button>
           <div>
+            <span class="eyebrow">AutoValor AI</span>
             <h1>{{ step === 'photos' ? prefs.t('sellYourCar') : prefs.t('reviewListing') }}</h1>
             <p>{{ step === 'photos' ? prefs.t('sellSubtitlePhotos') : prefs.t('sellSubtitleReview') }}</p>
           </div>
@@ -16,20 +17,65 @@
 
     <ion-content class="sell-content mobile-safe-content">
       <section v-if="step === 'photos'" class="screen-block">
-        <div class="hero-card">
-          <div class="hero-icon">
-            <ion-icon :icon="sparklesOutline" />
+        <div class="progress-card">
+          <div class="progress-heading">
+            <span>{{ guidedText.progressTitle }}</span>
+            <strong>{{ uploadedFiles.length }}/{{ maxImages }} {{ prefs.t('selected') }}</strong>
           </div>
-          <h2>{{ prefs.t('aiVehicleScan') }}</h2>
-          <p>{{ prefs.t('aiVehicleScanText') }}</p>
+          <div class="stepper">
+            <div class="step-pill active">
+              <span>1</span>
+              <p>{{ guidedText.stepPhotos }}</p>
+            </div>
+            <div class="step-line" />
+            <div class="step-pill">
+              <span>2</span>
+              <p>{{ guidedText.stepAi }}</p>
+            </div>
+            <div class="step-line" />
+            <div class="step-pill">
+              <span>3</span>
+              <p>{{ guidedText.stepPublish }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-card hero-card-gradient">
+          <div class="hero-copy">
+            <div class="hero-icon">
+              <ion-icon :icon="sparklesOutline" />
+            </div>
+            <span class="eyebrow dark">{{ guidedText.aiAssistant }}</span>
+            <h2>{{ prefs.t('aiVehicleScan') }}</h2>
+            <p>{{ prefs.t('aiVehicleScanText') }}</p>
+          </div>
+          <div class="hero-stats">
+            <div>
+              <strong>6</strong>
+              <span>{{ guidedText.photoAngles }}</span>
+            </div>
+            <div>
+              <strong>AI</strong>
+              <span>{{ guidedText.autoFill }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="guide-card">
+          <div class="guide-step-number">1</div>
+          <div>
+            <h3>{{ guidedText.uploadStepTitle }}</h3>
+            <p>{{ guidedText.uploadStepText }}</p>
+          </div>
         </div>
 
         <div class="upload-card">
           <div class="section-heading">
             <div>
               <h3>{{ prefs.t('photoGuide') }}</h3>
-              <p>{{ uploadedFiles.length }}/{{ maxImages }} {{ prefs.t('selected') }}</p>
+              <p>{{ guidedText.photoGuideHint }}</p>
             </div>
+            <span class="counter-badge">{{ uploadedFiles.length }}/{{ maxImages }}</span>
           </div>
 
           <div class="photo-slots-grid">
@@ -39,6 +85,7 @@
               <img v-if="previews[index]" :src="previews[index]?.url" :alt="slot.title" />
 
               <div v-else class="slot-empty-state">
+                <span class="slot-number">{{ index + 1 }}</span>
                 <ion-icon :icon="slot.icon" />
                 <strong>{{ slot.title }}</strong>
                 <small>{{ slot.description }}</small>
@@ -52,7 +99,10 @@
         </div>
 
         <div class="tips-card">
-          <h3>{{ prefs.t('tipsForBetterAi') }}</h3>
+          <div class="tips-title-row">
+            <h3>{{ prefs.t('tipsForBetterAi') }}</h3>
+            <span>{{ guidedText.recommended }}</span>
+          </div>
           <ul>
             <li>{{ prefs.t('tipClearPhotos') }}</li>
             <li>{{ prefs.t('tipDashboard') }}</li>
@@ -63,16 +113,46 @@
         <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
         <p v-if="aiMessage" class="success-message">{{ aiMessage }}</p>
 
-        <ion-button expand="block" class="primary-btn" :disabled="aiLoading || uploadedFiles.length === 0" @click="generateSuggestion">
-          <ion-spinner v-if="aiLoading" name="crescent" />
-          <span v-else>{{ prefs.t('analyzeVehicle') }}</span>
-        </ion-button>
+        <div class="sticky-action-card">
+          <div>
+            <strong>{{ guidedText.readyForAi }}</strong>
+            <p>{{ uploadedFiles.length === 0 ? guidedText.addOnePhoto : guidedText.aiWillCreateDraft }}</p>
+          </div>
+          <ion-button expand="block" class="primary-btn" :disabled="aiLoading || uploadedFiles.length === 0" @click="generateSuggestion">
+            <ion-spinner v-if="aiLoading" name="crescent" />
+            <span v-else>{{ prefs.t('analyzeVehicle') }}</span>
+          </ion-button>
+        </div>
       </section>
 
       <section v-else class="screen-block">
-        <div class="review-card">
+        <div class="progress-card">
+          <div class="progress-heading">
+            <span>{{ guidedText.progressTitle }}</span>
+            <strong>{{ guidedText.reviewMode }}</strong>
+          </div>
+          <div class="stepper">
+            <div class="step-pill done">
+              <span>1</span>
+              <p>{{ guidedText.stepPhotos }}</p>
+            </div>
+            <div class="step-line done" />
+            <div class="step-pill done">
+              <span>2</span>
+              <p>{{ guidedText.stepAi }}</p>
+            </div>
+            <div class="step-line" />
+            <div class="step-pill active">
+              <span>3</span>
+              <p>{{ guidedText.stepPublish }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="review-card review-hero-card">
           <div class="review-title-row">
             <div>
+              <span class="eyebrow dark">{{ guidedText.aiDraftReady }}</span>
               <h2>{{ form.title || prefs.t('vehicleListing') }}</h2>
               <p>{{ form.brand }} {{ form.model }}<span v-if="form.year"> · {{ form.year }}</span></p>
             </div>
@@ -92,8 +172,19 @@
           </ul>
         </div>
 
+        <div class="guide-card">
+          <div class="guide-step-number">2</div>
+          <div>
+            <h3>{{ guidedText.reviewStepTitle }}</h3>
+            <p>{{ guidedText.reviewStepText }}</p>
+          </div>
+        </div>
+
         <div class="form-card">
-          <h3>{{ prefs.t('basicInformation') }}</h3>
+          <div class="form-card-title">
+            <h3>{{ prefs.t('basicInformation') }}</h3>
+            <span>{{ guidedText.required }}</span>
+          </div>
           <div class="form-grid">
             <ion-input v-model="form.title" :label="prefs.t('title')" label-placement="stacked" fill="outline" />
             <ion-input v-model="form.brand" :label="prefs.t('brand')" label-placement="stacked" fill="outline" />
@@ -105,7 +196,10 @@
         </div>
 
         <div class="form-card">
-          <h3>{{ prefs.t('details') }}</h3>
+          <div class="form-card-title">
+            <h3>{{ prefs.t('details') }}</h3>
+            <span>{{ guidedText.optional }}</span>
+          </div>
           <div class="form-grid">
             <ion-input v-model="form.fuelType" :label="prefs.t('fuel')" label-placement="stacked" fill="outline" />
             <ion-input v-model="form.transmission" :label="prefs.t('transmission')" label-placement="stacked" fill="outline" />
@@ -121,7 +215,10 @@
         </div>
 
         <div class="form-card">
-          <h3>{{ prefs.t('description') }}</h3>
+          <div class="form-card-title">
+            <h3>{{ prefs.t('description') }}</h3>
+            <span>{{ guidedText.finalCheck }}</span>
+          </div>
           <ion-textarea v-model="form.description" :label="prefs.t('description')" label-placement="stacked" fill="outline" auto-grow class="description-area" />
           <div class="toggles">
             <ion-toggle v-model="warrantyValue">{{ prefs.t('warranty') }}</ion-toggle>
@@ -133,7 +230,11 @@
         <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
         <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
 
-        <div class="bottom-actions">
+        <div class="bottom-actions publish-panel">
+          <div class="publish-copy">
+            <strong>{{ guidedText.publishStepTitle }}</strong>
+            <p>{{ guidedText.publishStepText }}</p>
+          </div>
           <ion-button expand="block" fill="outline" class="secondary-btn" :disabled="publishing" @click="goBackToPhotos">{{ prefs.t('editPhotos') }}</ion-button>
           <ion-button expand="block" class="primary-btn" :disabled="publishing" @click="publishListing">
             <ion-spinner v-if="publishing" name="crescent" />
@@ -178,6 +279,56 @@ const router = useRouter();
 const auth = useAuthStore();
 const prefs = usePreferencesStore();
 const maxImages = 6;
+
+const guidedText = computed(() => prefs.language === 'es' ? {
+  progressTitle: 'Progreso del anuncio',
+  stepPhotos: 'Fotos',
+  stepAi: 'IA',
+  stepPublish: 'Publicar',
+  aiAssistant: 'Asistente inteligente',
+  photoAngles: 'ángulos guiados',
+  autoFill: 'relleno automático',
+  uploadStepTitle: 'Paso 1 · Sube las fotos del vehículo',
+  uploadStepText: 'Añade las imágenes principales. Cuanto más claras sean, mejor podrá completar AutoValor el anuncio.',
+  photoGuideHint: 'Toca cada bloque para subir una imagen en el orden recomendado.',
+  recommended: 'Recomendado',
+  readyForAi: 'Listo para analizar',
+  addOnePhoto: 'Añade al menos una foto para activar la IA.',
+  aiWillCreateDraft: 'La IA preparará una propuesta de anuncio editable.',
+  reviewMode: 'Revisión',
+  aiDraftReady: 'Borrador generado',
+  reviewStepTitle: 'Paso 2 · Revisa y completa la información',
+  reviewStepText: 'La IA puede equivocarse. Comprueba marca, modelo, precio, kilometraje y descripción antes de publicar.',
+  required: 'Obligatorio',
+  optional: 'Opcional',
+  finalCheck: 'Revisión final',
+  publishStepTitle: 'Paso 3 · Publica el anuncio',
+  publishStepText: 'Al publicar, se guardará el anuncio y las fotos se subirán a Cloudinary.',
+} : {
+  progressTitle: 'Listing progress',
+  stepPhotos: 'Photos',
+  stepAi: 'AI',
+  stepPublish: 'Publish',
+  aiAssistant: 'Smart assistant',
+  photoAngles: 'guided angles',
+  autoFill: 'auto fill',
+  uploadStepTitle: 'Step 1 · Upload vehicle photos',
+  uploadStepText: 'Add the main images. The clearer they are, the better AutoValor can prepare the listing.',
+  photoGuideHint: 'Tap each block to upload an image in the recommended order.',
+  recommended: 'Recommended',
+  readyForAi: 'Ready to analyze',
+  addOnePhoto: 'Add at least one photo to activate AI.',
+  aiWillCreateDraft: 'AI will prepare an editable listing draft.',
+  reviewMode: 'Review',
+  aiDraftReady: 'Draft generated',
+  reviewStepTitle: 'Step 2 · Review and complete the information',
+  reviewStepText: 'AI can make mistakes. Check brand, model, price, mileage and description before publishing.',
+  required: 'Required',
+  optional: 'Optional',
+  finalCheck: 'Final check',
+  publishStepTitle: 'Step 3 · Publish the listing',
+  publishStepText: 'When publishing, the listing is saved and photos are uploaded to Cloudinary.',
+});
 
 const photoSlots = computed(() => [
   { key: 'front', title: prefs.t('front'), description: prefs.t('frontDescription'), icon: carSportOutline },
@@ -413,6 +564,18 @@ function cleanPayload(payload: CreateListingRequest): CreateListingRequest {
   gap: 12px;
 }
 
+.eyebrow {
+  display: inline-flex;
+  margin-bottom: 4px;
+  color: #8b8e96;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.eyebrow.dark { color: #555861; }
+
 .topbar h1 {
   margin: 0;
   color: #1f222a;
@@ -442,30 +605,62 @@ function cleanPayload(payload: CreateListingRequest): CreateListingRequest {
 
 .sell-content { --background: #ffffff; }
 .screen-block { padding: 12px var(--app-page-gutter) 28px; }
-.hero-card, .upload-card, .tips-card, .review-card, .form-card, .warnings { background: #f6f6f7; border-radius: 22px; padding: 18px; margin-bottom: 14px; }
+.hero-card, .upload-card, .tips-card, .review-card, .form-card, .warnings, .progress-card, .guide-card, .sticky-action-card, .publish-panel { background: #f6f6f7; border-radius: 22px; padding: 18px; margin-bottom: 14px; }
+
+.progress-card { background: #ffffff; border: 1px solid #eceef2; box-shadow: 0 10px 30px rgba(31, 34, 42, 0.05); }
+.progress-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.progress-heading span { color: #8b8e96; font-size: 12px; font-weight: 800; }
+.progress-heading strong { color: #1f222a; font-size: 12px; }
+.stepper { display: grid; grid-template-columns: 1fr 24px 1fr 24px 1fr; align-items: center; gap: 4px; }
+.step-pill { display: flex; flex-direction: column; align-items: center; gap: 6px; color: #a1a4ac; }
+.step-pill span { width: 28px; height: 28px; border-radius: 999px; background: #f0f1f4; display: grid; place-items: center; font-size: 12px; font-weight: 900; }
+.step-pill p { margin: 0; font-size: 11px; font-weight: 800; text-align: center; }
+.step-pill.active span, .step-pill.done span { background: #1f222a; color: #ffffff; }
+.step-pill.active, .step-pill.done { color: #1f222a; }
+.step-line { height: 2px; border-radius: 99px; background: #eceef2; }
+.step-line.done { background: #1f222a; }
+
 .hero-card { text-align: left; }
-.hero-icon { width: 50px; height: 50px; border-radius: 16px; background: #ffffff; color: #1f222a; display: grid; place-items: center; margin-bottom: 14px; }
+.hero-card-gradient { background: linear-gradient(135deg, #f4f5f8 0%, #ffffff 52%, #eceef3 100%); border: 1px solid #eceef2; display: grid; gap: 16px; }
+.hero-copy { min-width: 0; }
+.hero-icon { width: 50px; height: 50px; border-radius: 16px; background: #ffffff; color: #1f222a; display: grid; place-items: center; margin-bottom: 14px; box-shadow: 0 10px 24px rgba(31, 34, 42, 0.08); }
 .hero-icon ion-icon { font-size: 24px; }
-.hero-card h2, .review-card h2, .form-card h3, .upload-card h3, .tips-card h3 { margin: 0; color: #1f222a; font-weight: 800; }
+.hero-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.hero-stats div { background: #ffffff; border-radius: 18px; padding: 14px; }
+.hero-stats strong { display: block; color: #1f222a; font-size: 20px; font-weight: 900; }
+.hero-stats span { display: block; margin-top: 2px; color: #7d8088; font-size: 12px; font-weight: 700; }
+
+.hero-card h2, .review-card h2, .form-card h3, .upload-card h3, .tips-card h3, .guide-card h3 { margin: 0; color: #1f222a; font-weight: 800; }
 .hero-card h2, .review-card h2 { font-size: 22px; }
-.upload-card h3, .tips-card h3, .form-card h3 { font-size: 18px; }
-.hero-card p, .section-heading p, .review-title-row p { margin: 6px 0 0; color: #7d8088; font-size: 14px; line-height: 1.45; }
+.upload-card h3, .tips-card h3, .form-card h3, .guide-card h3 { font-size: 18px; }
+.hero-card p, .section-heading p, .review-title-row p, .guide-card p, .publish-copy p, .sticky-action-card p { margin: 6px 0 0; color: #7d8088; font-size: 14px; line-height: 1.45; }
+
+.guide-card { display: flex; align-items: flex-start; gap: 12px; background: #1f222a; color: #ffffff; }
+.guide-card h3, .guide-card p { color: #ffffff; }
+.guide-card p { opacity: 0.78; }
+.guide-step-number { width: 32px; height: 32px; border-radius: 999px; background: rgba(255, 255, 255, 0.14); display: grid; place-items: center; flex-shrink: 0; font-weight: 900; }
+
 .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.counter-badge, .tips-title-row span, .form-card-title span { border-radius: 999px; background: #ffffff; color: #1f222a; padding: 7px 10px; font-size: 12px; font-weight: 900; white-space: nowrap; }
 .photo-slots-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.photo-slot { position: relative; min-height: 132px; border: 2px dashed #d6d8dd; border-radius: 18px; background: #ffffff; overflow: hidden; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.photo-slot { position: relative; min-height: 144px; border: 2px dashed #d6d8dd; border-radius: 18px; background: #ffffff; overflow: hidden; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.18s ease, border-color 0.18s ease; }
+.photo-slot:active { transform: scale(0.98); }
 .photo-slot.filled { border-style: solid; border-color: transparent; }
 .photo-slot input { display: none; }
-.photo-slot > img { width: 100%; height: 100%; min-height: 132px; object-fit: cover; }
+.photo-slot > img { width: 100%; height: 100%; min-height: 144px; object-fit: cover; }
 .slot-empty-state { padding: 12px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.slot-number { width: 24px; height: 24px; border-radius: 999px; background: #f0f1f4; color: #1f222a; display: grid; place-items: center; font-size: 11px; font-weight: 900; margin-bottom: 2px; }
 .slot-empty-state ion-icon { font-size: 28px; color: #1f222a; }
 .slot-empty-state strong { color: #1f222a; font-size: 14px; font-weight: 800; }
 .slot-empty-state small { color: #8b8e96; font-size: 11px; line-height: 1.25; }
 .remove-photo-btn { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border: 0; border-radius: 999px; background: rgba(0, 0, 0, 0.68); color: #ffffff; display: grid; place-items: center; }
+.tips-title-row, .form-card-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .tips-card ul { margin: 10px 0 0; padding-left: 18px; color: #7d8088; font-size: 14px; line-height: 1.45; }
 .description-area { margin-top: 12px; --background: #ffffff; --border-radius: 16px; }
 .review-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.review-hero-card { background: #f3f4f7; border: 1px solid #eceef2; }
 .confidence-pill { background: #ffffff; color: #1f222a; border-radius: 999px; padding: 7px 10px; font-size: 12px; font-weight: 800; white-space: nowrap; }
-.mini-gallery { margin-top: 14px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; height: 72px; }
+.mini-gallery { margin-top: 14px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; height: 82px; }
 .mini-gallery img, .more-photos { border-radius: 14px; overflow: hidden; background: #ffffff; }
 .mini-gallery img { width: 100%; height: 100%; object-fit: cover; }
 .more-photos { display: grid; place-items: center; color: #1f222a; font-weight: 800; }
@@ -481,5 +676,8 @@ function cleanPayload(payload: CreateListingRequest): CreateListingRequest {
 .primary-btn { --background: #3b3b3f; --color: #ffffff; }
 .secondary-btn { --color: #1f222a; --border-color: #d9dbe0; }
 .bottom-actions { display: grid; gap: 10px; margin-top: 4px; }
-@media (min-width: 768px) { .screen-block { max-width: 760px; margin: 0 auto; } .form-grid { grid-template-columns: repeat(2, 1fr); } }
+.sticky-action-card { display: grid; gap: 12px; background: #ffffff; border: 1px solid #eceef2; box-shadow: 0 10px 30px rgba(31, 34, 42, 0.07); }
+.sticky-action-card strong, .publish-copy strong { color: #1f222a; font-size: 16px; }
+.publish-panel { background: #ffffff; border: 1px solid #eceef2; box-shadow: 0 -8px 24px rgba(31, 34, 42, 0.05); }
+@media (min-width: 768px) { .screen-block { max-width: 760px; margin: 0 auto; } .form-grid { grid-template-columns: repeat(2, 1fr); } .hero-card-gradient { grid-template-columns: 1.4fr 0.8fr; align-items: end; } .sticky-action-card { grid-template-columns: 1fr 260px; align-items: center; } }
 </style>
