@@ -46,13 +46,14 @@
             <div v-for="car in lastViewed" :key="car.id" class="product-card last-view-card" @click="goToCar(car.id)">
               <div class="card-image">
                 <img :src="car.image" :alt="car.name" />
+                <span v-if="car.statusBadge" class="status-overlay" :class="car.statusClass">{{ car.statusBadge }}</span>
                 <button class="card-heart" @click.stop="toggleFavorite(car.id)"><ion-icon :icon="wishlist.isInWishlist(String(car.id)) ? heart : heartOutline" /></button>
               </div>
               <div class="card-info">
                 <div class="card-name">{{ car.name }}</div>
                 <div class="card-meta">
                   <span class="card-rating"><ion-icon :icon="star" /> {{ car.year || 'S/A' }}</span>
-                  <span class="card-badge">{{ car.tag }}</span>
+                  <span class="card-badge" :class="car.statusClass">{{ car.tag }}</span>
                 </div>
                 <div class="card-price">{{ formatPrice(car.price) }} €</div>
               </div>
@@ -84,13 +85,14 @@
             <div v-for="car in topDeals" :key="car.id" class="product-card" @click="goToCar(car.id)">
               <div class="card-image">
                 <img :src="car.image" :alt="car.name" />
+                <span v-if="car.statusBadge" class="status-overlay" :class="car.statusClass">{{ car.statusBadge }}</span>
                 <button class="card-heart" @click.stop="toggleFavorite(car.id)"><ion-icon :icon="wishlist.isInWishlist(String(car.id)) ? heart : heartOutline" /></button>
               </div>
               <div class="card-info">
                 <div class="card-name">{{ car.name }}</div>
                 <div class="card-meta">
                   <span class="card-rating"><ion-icon :icon="star" /> {{ car.year || 'S/A' }}</span>
-                  <span class="card-badge">{{ car.tag }}</span>
+                  <span class="card-badge" :class="car.statusClass">{{ car.tag }}</span>
                 </div>
                 <div class="card-price">{{ formatPrice(car.price) }} €</div>
               </div>
@@ -189,13 +191,39 @@ async function toggleFavorite(id: string | number) {
 
 function toCard(listing: ListingResponse) {
   const image = normalizeImageUrl(listing.images?.[0]?.url) || fallbackImage;
+  const statusInfo = getStatusInfo(listing.status, listing.fuelType);
   return {
     id: listing.id,
     image,
     name: listing.title || `${listing.brand || ''} ${listing.model || ''}`.trim() || prefs.t('vehicle'),
     year: listing.year,
-    tag: listing.status || listing.fuelType || prefs.t('available'),
+    tag: statusInfo.label,
+    statusBadge: statusInfo.overlay,
+    statusClass: statusInfo.className,
     price: listing.price || 0,
+  };
+}
+
+function getStatusInfo(status?: string | null, fallback?: string | null) {
+  const normalized = status?.toUpperCase();
+  if (normalized === 'SOLD') {
+    return {
+      label: prefs.language === 'es' ? 'Vendido' : 'Sold',
+      overlay: prefs.language === 'es' ? 'Vendido' : 'Sold',
+      className: 'status-sold',
+    };
+  }
+  if (normalized === 'RESERVED') {
+    return {
+      label: prefs.language === 'es' ? 'Reservado' : 'Reserved',
+      overlay: prefs.language === 'es' ? 'Reservado' : 'Reserved',
+      className: 'status-reserved',
+    };
+  }
+  return {
+    label: fallback || prefs.t('available'),
+    overlay: '',
+    className: 'status-available',
   };
 }
 
@@ -348,6 +376,30 @@ function formatPrice(n: number) {
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 .card-heart ion-icon { width: 16px; height: 16px; color: #e11d48; }
+.status-overlay {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  z-index: 2;
+  border-radius: 999px;
+  padding: 5px 10px;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: 0 8px 18px rgba(31, 34, 42, 0.18);
+}
+.status-overlay.status-sold,
+.card-badge.status-sold {
+  background: #1f222a;
+  color: #ffffff;
+}
+.status-overlay.status-reserved,
+.card-badge.status-reserved {
+  background: #fff3cd;
+  color: #8a5a00;
+}
 .card-info { padding: 10px 12px 14px; }
 .card-name { font-size: 15px; font-weight: 700; color: #1f222a; margin-bottom: 4px; }
 .card-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
